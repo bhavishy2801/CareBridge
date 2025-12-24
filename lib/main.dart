@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 // Providers
 import 'providers/auth_provider.dart';
@@ -52,7 +51,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
-          return MaterialApp.router(
+          return MaterialApp(
             title: 'CareBridge',
             theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
@@ -73,7 +72,19 @@ class MyApp extends StatelessWidget {
                 filled: true,
               ),
             ),
-            routerConfig: _createRouter(authProvider),
+            initialRoute: _getInitialRoute(authProvider),
+            routes: _createRoutes(),
+            onGenerateRoute: (settings) {
+              if (settings.name == '/doctor/patient-detail') {
+                final patient = settings.arguments as PatientSummary?;
+                if (patient != null) {
+                  return MaterialPageRoute(
+                    builder: (context) => CreateCarePlanScreen(patient: patient),
+                  );
+                }
+              }
+              return null;
+            },
             debugShowCheckedModeBanner: false,
           );
         },
@@ -81,91 +92,38 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  GoRouter _createRouter(AuthProvider authProvider) {
-    return GoRouter(
-      initialLocation: '/login',
-      redirect: (context, state) {
-        final isAuthenticated = authProvider.isAuthenticated;
-        final isAuthRoute = state.matchedLocation == '/login' || 
-                           state.matchedLocation == '/signup';
+  String _getInitialRoute(AuthProvider authProvider) {
+    if (!authProvider.isAuthenticated) {
+      return '/login';
+    }
 
-        if (!isAuthenticated && !isAuthRoute) {
-          return '/login';
-        }
+    final user = authProvider.currentUser;
+    switch (user?.role) {
+      case UserRole.patient:
+        return '/patient/home';
+      case UserRole.doctor:
+        return '/doctor/dashboard';
+      case UserRole.caregiver:
+        return '/caregiver/dashboard';
+      case UserRole.admin:
+        return '/admin/panel';
+      default:
+        return '/login';
+    }
+  }
 
-        if (isAuthenticated && isAuthRoute) {
-          final user = authProvider.currentUser;
-          switch (user?.role) {
-            case UserRole.patient:
-              return '/patient/home';
-            case UserRole.doctor:
-              return '/doctor/dashboard';
-            case UserRole.caregiver:
-              return '/caregiver/dashboard';
-            case UserRole.admin:
-              return '/admin/panel';
-            default:
-              return '/login';
-          }
-        }
-
-        return null;
-      },
-      routes: [
-        // Auth Routes
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/signup',
-          builder: (context, state) => const SignupScreen(),
-        ),
-
-        // Patient Routes
-        GoRoute(
-          path: '/patient/home',
-          builder: (context, state) => const PatientHomeScreen(),
-        ),
-        GoRoute(
-          path: '/patient/symptom-form',
-          builder: (context, state) => const SymptomFormScreen(),
-        ),
-        GoRoute(
-          path: '/patient/care-plan',
-          builder: (context, state) => const CarePlanViewScreen(),
-        ),
-        GoRoute(
-          path: '/patient/tasks',
-          builder: (context, state) => const DailyTasksScreen(),
-        ),
-
-        // Doctor Routes
-        GoRoute(
-          path: '/doctor/dashboard',
-          builder: (context, state) => const DoctorDashboardScreen(),
-        ),
-        GoRoute(
-          path: '/doctor/patient-detail',
-          builder: (context, state) {
-            final patient = state.extra as PatientSummary;
-            return CreateCarePlanScreen(patient: patient);
-          },
-        ),
-
-        // Caregiver Routes
-        GoRoute(
-          path: '/caregiver/dashboard',
-          builder: (context, state) => const CaregiverDashboardScreen(),
-        ),
-
-        // Admin Routes
-        GoRoute(
-          path: '/admin/panel',
-          builder: (context, state) => const AdminPanelScreen(),
-        ),
-      ],
-    );
+  Map<String, WidgetBuilder> _createRoutes() {
+    return {
+      '/login': (context) => const LoginScreen(),
+      '/signup': (context) => const SignupScreen(),
+      '/patient/home': (context) => const PatientHomeScreen(),
+      '/patient/symptom-form': (context) => const SymptomFormScreen(),
+      '/patient/care-plan': (context) => const CarePlanViewScreen(),
+      '/patient/tasks': (context) => const DailyTasksScreen(),
+      '/doctor/dashboard': (context) => const DoctorDashboardScreen(),
+      '/caregiver/dashboard': (context) => const CaregiverDashboardScreen(),
+      '/admin/panel': (context) => const AdminPanelScreen(),
+    };
   }
 }
 

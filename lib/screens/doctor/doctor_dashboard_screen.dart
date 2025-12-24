@@ -71,6 +71,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await context.read<AuthProvider>().logout();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
           ),
         ],

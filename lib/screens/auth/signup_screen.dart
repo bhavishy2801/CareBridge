@@ -38,6 +38,25 @@ class _SignupScreenState extends State<SignupScreen> {
               _passwordController.text,
               _selectedRole,
             );
+        
+        if (mounted) {
+          String route;
+          switch (_selectedRole) {
+            case UserRole.patient:
+              route = '/patient/home';
+              break;
+            case UserRole.doctor:
+              route = '/doctor/dashboard';
+              break;
+            case UserRole.caregiver:
+              route = '/caregiver/dashboard';
+              break;
+            case UserRole.admin:
+              route = '/admin/panel';
+              break;
+          }
+          Navigator.pushReplacementNamed(context, route);
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

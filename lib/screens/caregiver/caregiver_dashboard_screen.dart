@@ -58,6 +58,9 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await context.read<AuthProvider>().logout();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
           ),
         ],
