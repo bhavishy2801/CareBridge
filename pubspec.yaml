@@ -33,11 +33,11 @@ dependencies:
   printing: ^5.11.1
   
   # Notifications
-  flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: 19.5.0
   
   # Image Picker for Reports
   image_picker: ^1.0.7
-  file_picker: ^6.1.1
+  file_picker: ^8.0.0
   
   # Charts for Dashboard
   fl_chart: ^0.66.0
