@@ -70,7 +70,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final message = await _authService.signup(
+      final result = await _authService.signup(
         name: name,
         email: email,
         password: password,
@@ -82,7 +82,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       // Signup does NOT auto-login
-      return message;
+      return result['message'] ?? 'User registered successfully';
     } catch (e) {
       rethrow;
     } finally {
@@ -96,6 +96,36 @@ class AuthProvider extends ChangeNotifier {
     await _authService.logout();
     _currentUser = null;
     _token = null;
+    notifyListeners();
+  }
+
+  /// REFRESH USER DATA (fetch updated profile from server)
+  Future<void> refreshUser() async {
+    if (_token == null) return;
+    
+    try {
+      final updatedUser = await _authService.getProfile();
+      if (updatedUser != null) {
+        _currentUser = updatedUser;
+        notifyListeners();
+      }
+    } catch (e) {
+      // Silently fail - user data is still cached
+      debugPrint('Failed to refresh user: $e');
+    }
+  }
+
+  /// Update local user with new associations
+  void updateUserAssociations({
+    List<AssociatedDoctor>? doctors,
+    List<AssociatedPatient>? patients,
+  }) {
+    if (_currentUser == null) return;
+
+    _currentUser = _currentUser!.copyWith(
+      associatedDoctors: doctors ?? _currentUser!.associatedDoctors,
+      associatedPatients: patients ?? _currentUser!.associatedPatients,
+    );
     notifyListeners();
   }
 }

@@ -10,7 +10,7 @@ import '../models/previsit_form.dart';
 import '../models/notification_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://carebridge-xhnj.onrender.com/api';
+  static const String baseUrl = 'https://carebridge-szmf.onrender.com/api';
 
   final String? authToken;
 

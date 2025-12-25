@@ -398,3 +398,45 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
     );
   }
 }
+
+/// Wrapper screen that reads arguments from route and creates a PatientSummary
+class CreateCarePlanFromArgsScreen extends StatelessWidget {
+  const CreateCarePlanFromArgsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    
+    // If we have route arguments (from patient card)
+    if (args is Map<String, dynamic>) {
+      final patientId = args['patientId'] as String? ?? '';
+      final patientName = args['patientName'] as String? ?? 'Patient';
+      
+      // Create a minimal PatientSummary for the care plan screen
+      final patient = PatientSummary(
+        patientId: patientId,
+        patientName: patientName,
+        lastReportDate: DateTime.now(),
+        severity: 'Unknown',
+        timeline: 'Ongoing',
+        keySymptoms: [],
+        needsConsultation: false,
+      );
+      
+      return CreateCarePlanScreen(patient: patient);
+    }
+    
+    // If we have a PatientSummary directly
+    if (args is PatientSummary) {
+      return CreateCarePlanScreen(patient: args);
+    }
+    
+    // Fallback - show error
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Care Plan')),
+      body: const Center(
+        child: Text('Error: No patient information provided'),
+      ),
+    );
+  }
+}

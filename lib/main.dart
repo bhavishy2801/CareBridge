@@ -21,12 +21,19 @@ import 'screens/patient/daily_tasks_screen.dart';
 // Screens - Doctor
 import 'screens/doctor/doctor_dashboard_screen.dart';
 import 'screens/doctor/create_care_plan_screen.dart';
+import 'screens/doctor/qr_scanner_screen.dart';
 
 // Screens - Caregiver
 import 'screens/caregiver/caregiver_dashboard_screen.dart';
 
 // Screens - Admin
 import 'screens/admin/admin_panel_screen.dart';
+
+// Screens - Common
+import 'screens/common/profile_screen.dart';
+
+// Screens - Chat
+import 'screens/chat/conversation_screen.dart';
 
 // Services
 import 'services/notification_service.dart';
@@ -121,8 +128,12 @@ class MyApp extends StatelessWidget {
       '/patient/care-plan': (context) => const CarePlanViewScreen(),
       '/patient/tasks': (context) => const DailyTasksScreen(),
       '/doctor/dashboard': (context) => const DoctorDashboardScreen(),
+      '/doctor/scan-qr': (context) => const QrScannerScreen(),
+      '/doctor/create-care-plan': (context) => const CreateCarePlanFromArgsScreen(),
       '/caregiver/dashboard': (context) => const CaregiverDashboardScreen(),
       '/admin/panel': (context) => const AdminPanelScreen(),
+      '/profile': (context) => const ProfileScreen(),
+      '/chat/conversation': (context) => const ConversationScreen(),
     };
   }
 }
