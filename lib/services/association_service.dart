@@ -20,6 +20,9 @@ class AssociationService {
 
   Future<Map<String, dynamic>> scanQrCode(String qrCodeId, {String? notes}) async {
     try {
+      print('📡 API Request: POST $baseUrl/associations/scan');
+      print('📦 Body: {qrCodeId: $qrCodeId${notes != null ? ', notes: $notes' : ''}}');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/associations/scan'),
         headers: headers,
@@ -29,13 +32,22 @@ class AssociationService {
         }),
       );
 
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
         final error = json.decode(response.body);
-        throw Exception(error['msg'] ?? 'Failed to scan QR code');
+        final errorMsg = error['msg'] ?? error['message'] ?? 'Failed to scan QR code';
+        print('❌ API Error: $errorMsg');
+        throw Exception(errorMsg);
       }
     } catch (e) {
+      print('❌ Exception in scanQrCode: $e');
+      if (e is Exception) {
+        rethrow;
+      }
       throw Exception('QR scan error: $e');
     }
   }

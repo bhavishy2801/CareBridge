@@ -65,6 +65,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     final auth = context.read<AuthProvider>();
     final token = auth.token;
 
+    print('🔍 Scanning QR Code: $qrCodeId');
+    print('🔑 Auth token: ${token?.substring(0, 20)}...');
+
     if (token == null) {
       _showError('Not authenticated');
       return;
@@ -73,9 +76,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     final associationService = AssociationService(authToken: token);
 
     try {
+      print('🔄 Fetching patient details...');
       // First, try to get patient info
       final patientData = await associationService.getPatientByQr(qrCodeId);
+      print('✅ Patient data received: ${patientData.keys}');
+      
       final patient = patientData['patient'];
+      print('👤 Patient: ${patient?['name']} (${patient?['email']})');
 
       if (!mounted) return;
 
@@ -89,12 +96,16 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         ),
       );
 
+      print('🤔 User decision - Connect: $shouldConnect');
+
       if (shouldConnect == true) {
         await _connectToPatient(qrCodeId, associationService);
       } else {
         _resetScanner();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Error fetching patient: $e');
+      print('Stack trace: $stackTrace');
       _showError('Failed to fetch patient: $e');
     }
   }
@@ -104,12 +115,18 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     AssociationService associationService,
   ) async {
     try {
+      print('🔄 Attempting to connect with QR Code: $qrCodeId');
+      
       final result = await associationService.scanQrCode(qrCodeId);
+      
+      print('✅ Connection result: $result');
 
       if (!mounted) return;
 
       // Refresh user data
+      print('🔄 Refreshing user data...');
       await context.read<AuthProvider>().refreshUser();
+      print('✅ User data refreshed');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -120,7 +137,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
       // Return success
       Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Connection error: $e');
+      print('Stack trace: $stackTrace');
       _showError('Failed to connect: $e');
     }
   }
