@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/patient_summary.dart';
 import '../../models/care_plan.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 
 class CreateCarePlanScreen extends StatefulWidget {
   final PatientSummary patient;
@@ -26,7 +27,7 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
         final nameController = TextEditingController();
         final dosageController = TextEditingController();
         final frequencyController = TextEditingController();
-        final instructionsController = TextEditingController();
+        final durationController = TextEditingController();
 
         return AlertDialog(
           title: const Text('Add Medication'),
@@ -40,16 +41,15 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
                 ),
                 TextField(
                   controller: dosageController,
-                  decoration: const InputDecoration(labelText: 'Dosage'),
+                  decoration: const InputDecoration(labelText: 'Dosage (e.g., 100mg)'),
                 ),
                 TextField(
                   controller: frequencyController,
-                  decoration: const InputDecoration(labelText: 'Frequency'),
+                  decoration: const InputDecoration(labelText: 'Frequency (e.g., Once daily)'),
                 ),
                 TextField(
-                  controller: instructionsController,
-                  decoration: const InputDecoration(labelText: 'Instructions'),
-                  maxLines: 2,
+                  controller: durationController,
+                  decoration: const InputDecoration(labelText: 'Duration (e.g., 30 days)'),
                 ),
               ],
             ),
@@ -69,9 +69,9 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
                       name: nameController.text,
                       dosage: dosageController.text,
                       frequency: frequencyController.text,
-                      instructions: instructionsController.text.isEmpty
+                      duration: durationController.text.isEmpty
                           ? null
-                          : instructionsController.text,
+                          : durationController.text,
                     ));
                   });
                   Navigator.pop(context);
@@ -91,7 +91,7 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
       builder: (context) {
         final nameController = TextEditingController();
         final durationController = TextEditingController();
-        final descriptionController = TextEditingController();
+        final frequencyController = TextEditingController(text: 'Daily');
 
         return AlertDialog(
           title: const Text('Add Exercise'),
@@ -105,12 +105,11 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
                 ),
                 TextField(
                   controller: durationController,
-                  decoration: const InputDecoration(labelText: 'Duration'),
+                  decoration: const InputDecoration(labelText: 'Duration (e.g., 30 minutes)'),
                 ),
                 TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 2,
+                  controller: frequencyController,
+                  decoration: const InputDecoration(labelText: 'Frequency (e.g., Daily)'),
                 ),
               ],
             ),
@@ -128,9 +127,7 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
                     _exercises.add(Exercise(
                       name: nameController.text,
                       duration: durationController.text,
-                      description: descriptionController.text.isEmpty
-                          ? null
-                          : descriptionController.text,
+                      frequency: frequencyController.text,
                     ));
                   });
                   Navigator.pop(context);
@@ -191,18 +188,18 @@ class _CreateCarePlanScreenState extends State<CreateCarePlanScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final carePlan = CarePlan(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      final authService = AuthService();
+      final token = await authService.getToken();
+      
+      final apiService = ApiService(authToken: token);
+      await apiService.createCarePlan(
+        appointmentId: widget.patient.lastAppointmentId,
         patientId: widget.patient.patientId,
-        doctorId: 'doctor_123', // TODO: Get from auth
-        createdAt: DateTime.now(),
-        medications: _medications,
-        exercises: _exercises,
-        instructions: _instructions,
+        medications: _medications.map((m) => m.toJson()).toList(),
+        exercises: _exercises.map((e) => e.toJson()).toList(),
+        instructions: _instructions.join('\\n'), // Convert list to string
+        warningSigns: 'Contact doctor if symptoms worsen', // Add default or make it a form field
       );
-
-      final apiService = ApiService();
-      await apiService.createCarePlan(carePlan);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

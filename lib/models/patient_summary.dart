@@ -6,6 +6,7 @@ class PatientSummary {
   final String timeline;
   final List<String> keySymptoms;
   final bool needsConsultation;
+  final String? lastAppointmentId;
 
   PatientSummary({
     required this.patientId,
@@ -15,6 +16,7 @@ class PatientSummary {
     required this.timeline,
     required this.keySymptoms,
     this.needsConsultation = false,
+    this.lastAppointmentId,
   });
 
   factory PatientSummary.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class PatientSummary {
       timeline: json['timeline'],
       keySymptoms: List<String>.from(json['keySymptoms']),
       needsConsultation: json['needsConsultation'] ?? false,
+      lastAppointmentId: json['lastAppointmentId'],
     );
   }
 
@@ -38,6 +41,7 @@ class PatientSummary {
       'timeline': timeline,
       'keySymptoms': keySymptoms,
       'needsConsultation': needsConsultation,
+      'lastAppointmentId': lastAppointmentId,
     };
   }
 }

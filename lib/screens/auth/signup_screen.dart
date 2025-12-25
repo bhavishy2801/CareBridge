@@ -32,7 +32,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await context.read<AuthProvider>().signup(
+        final message = await context.read<AuthProvider>().signup(
               _nameController.text,
               _emailController.text,
               _passwordController.text,
@@ -40,22 +40,16 @@ class _SignupScreenState extends State<SignupScreen> {
             );
         
         if (mounted) {
-          String route;
-          switch (_selectedRole) {
-            case UserRole.patient:
-              route = '/patient/home';
-              break;
-            case UserRole.doctor:
-              route = '/doctor/dashboard';
-              break;
-            case UserRole.caregiver:
-              route = '/caregiver/dashboard';
-              break;
-            case UserRole.admin:
-              route = '/admin/panel';
-              break;
-          }
-          Navigator.pushReplacementNamed(context, route);
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to login screen after successful signup
+          Navigator.pushReplacementNamed(context, '/login');
         }
       } catch (e) {
         if (mounted) {

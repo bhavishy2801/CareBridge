@@ -39,8 +39,8 @@ class PdfService {
                       pw.Text('• ${med.name}', style: const pw.TextStyle(fontSize: 14)),
                       pw.Text('  Dosage: ${med.dosage}', style: const pw.TextStyle(fontSize: 12)),
                       pw.Text('  Frequency: ${med.frequency}', style: const pw.TextStyle(fontSize: 12)),
-                      if (med.instructions != null)
-                        pw.Text('  Instructions: ${med.instructions}',
+                      if (med.duration != null)
+                        pw.Text('  Duration: ${med.duration}',
                             style: const pw.TextStyle(fontSize: 12)),
                     ],
                   ),
@@ -60,8 +60,7 @@ class PdfService {
                     children: [
                       pw.Text('• ${ex.name}', style: const pw.TextStyle(fontSize: 14)),
                       pw.Text('  Duration: ${ex.duration}', style: const pw.TextStyle(fontSize: 12)),
-                      if (ex.description != null)
-                        pw.Text('  ${ex.description}', style: const pw.TextStyle(fontSize: 12)),
+                      pw.Text('  Frequency: ${ex.frequency}', style: const pw.TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -72,7 +71,7 @@ class PdfService {
                 style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 10),
-              ...carePlan.instructions.map(
+              ...carePlan.instructions.split('\n').where((line) => line.trim().isNotEmpty).map(
                 (instruction) => pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 4),
                   child: pw.Text('• $instruction', style: const pw.TextStyle(fontSize: 14)),

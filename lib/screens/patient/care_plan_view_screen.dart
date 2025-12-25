@@ -26,7 +26,8 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
     final user = context.read<AuthProvider>().currentUser;
     if (user != null) {
       final apiService = ApiService();
-      final carePlan = await apiService.getCarePlan(user.id);
+      final carePlans = await apiService.getCarePlans(user.id);
+      final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
       setState(() {
         _carePlan = carePlan;
         _isLoading = false;
@@ -147,8 +148,8 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
                                 children: [
                                   Text('Dosage: ${med.dosage}'),
                                   Text('Frequency: ${med.frequency}'),
-                                  if (med.instructions != null)
-                                    Text('Instructions: ${med.instructions}'),
+                                  if (med.duration != null)
+                                    Text('Duration: ${med.duration}'),
                                 ],
                               ),
                               isThreeLine: true,
@@ -182,11 +183,10 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Duration: ${ex.duration}'),
-                                  if (ex.description != null)
-                                    Text(ex.description!),
+                                  Text('Frequency: ${ex.frequency}'),
                                 ],
                               ),
-                              isThreeLine: ex.description != null,
+                              isThreeLine: true,
                             ),
                           ),
                         ),
@@ -205,6 +205,8 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: _carePlan!.instructions
+                                  .split('\n')
+                                  .where((line) => line.trim().isNotEmpty)
                                   .map(
                                     (instruction) => Padding(
                                       padding: const EdgeInsets.only(bottom: 8.0),

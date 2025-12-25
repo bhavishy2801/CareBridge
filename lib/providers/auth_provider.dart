@@ -7,6 +7,9 @@ class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
 
+  // DEBUG MODE: Set to true to skip login
+  static const bool debugMode = false;
+  
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
@@ -15,7 +18,17 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _currentUser = await _authService.getCurrentUser();
+    if (debugMode) {
+      // Mock user for debugging - change role as needed
+      _currentUser = User(
+        id: 'debug-user-123',
+        name: 'Debug User',
+        email: 'debug@test.com',
+        role: UserRole.patient, // Change to: doctor, patient, caregiver, admin
+      );
+    } else {
+      _currentUser = await _authService.getCurrentUser();
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -35,12 +48,14 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> signup(String name, String email, String password, UserRole role) async {
+  Future<String> signup(String name, String email, String password, UserRole role) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _currentUser = await _authService.signup(name, email, password, role);
+      final message = await _authService.signup(name, email, password, role);
+      // Signup successful but user must login separately
+      return message;
     } catch (e) {
       rethrow;
     } finally {

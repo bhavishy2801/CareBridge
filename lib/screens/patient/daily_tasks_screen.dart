@@ -27,7 +27,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     final user = context.read<AuthProvider>().currentUser;
     if (user != null) {
       final apiService = ApiService();
-      final carePlan = await apiService.getCarePlan(user.id);
+      final carePlans = await apiService.getCarePlans(user.id);
+      final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
       setState(() {
         _carePlan = carePlan;
         if (_carePlan != null) {
@@ -221,8 +222,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Duration: ${ex.duration}'),
-                                if (ex.description != null)
-                                  Text(ex.description!),
+                                Text('Frequency: ${ex.frequency}'),
                               ],
                             ),
                             value: _exerciseCompletion[ex.name] ?? false,

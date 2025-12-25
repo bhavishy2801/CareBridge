@@ -2,28 +2,33 @@ class CarePlan {
   final String id;
   final String patientId;
   final String doctorId;
+  final String? appointmentId;
   final DateTime createdAt;
   final List<Medication> medications;
   final List<Exercise> exercises;
-  final List<String> instructions;
+  final String instructions;
+  final String warningSigns;
   final String? pdfUrl;
 
   CarePlan({
     required this.id,
     required this.patientId,
     required this.doctorId,
+    this.appointmentId,
     required this.createdAt,
     required this.medications,
     required this.exercises,
     required this.instructions,
+    required this.warningSigns,
     this.pdfUrl,
   });
 
   factory CarePlan.fromJson(Map<String, dynamic> json) {
     return CarePlan(
-      id: json['id'],
+      id: json['_id'] ?? json['id'],
       patientId: json['patientId'],
       doctorId: json['doctorId'],
+      appointmentId: json['appointmentId'],
       createdAt: DateTime.parse(json['createdAt']),
       medications: (json['medications'] as List)
           .map((m) => Medication.fromJson(m))
@@ -31,7 +36,8 @@ class CarePlan {
       exercises: (json['exercises'] as List)
           .map((e) => Exercise.fromJson(e))
           .toList(),
-      instructions: List<String>.from(json['instructions']),
+      instructions: json['instructions'] ?? '',
+      warningSigns: json['warningSigns'] ?? '',
       pdfUrl: json['pdfUrl'],
     );
   }
@@ -41,10 +47,12 @@ class CarePlan {
       'id': id,
       'patientId': patientId,
       'doctorId': doctorId,
+      'appointmentId': appointmentId,
       'createdAt': createdAt.toIso8601String(),
       'medications': medications.map((m) => m.toJson()).toList(),
       'exercises': exercises.map((e) => e.toJson()).toList(),
       'instructions': instructions,
+      'warningSigns': warningSigns,
       'pdfUrl': pdfUrl,
     };
   }
@@ -54,13 +62,13 @@ class Medication {
   final String name;
   final String dosage;
   final String frequency;
-  final String? instructions;
+  final String? duration;
 
   Medication({
     required this.name,
     required this.dosage,
     required this.frequency,
-    this.instructions,
+    this.duration,
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) {
@@ -68,7 +76,7 @@ class Medication {
       name: json['name'],
       dosage: json['dosage'],
       frequency: json['frequency'],
-      instructions: json['instructions'],
+      duration: json['duration'],
     );
   }
 
@@ -77,7 +85,7 @@ class Medication {
       'name': name,
       'dosage': dosage,
       'frequency': frequency,
-      'instructions': instructions,
+      'duration': duration,
     };
   }
 }
@@ -85,19 +93,19 @@ class Medication {
 class Exercise {
   final String name;
   final String duration;
-  final String? description;
+  final String frequency;
 
   Exercise({
     required this.name,
     required this.duration,
-    this.description,
+    required this.frequency,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
     return Exercise(
       name: json['name'],
       duration: json['duration'],
-      description: json['description'],
+      frequency: json['frequency'] ?? 'Daily',
     );
   }
 
@@ -105,7 +113,7 @@ class Exercise {
     return {
       'name': name,
       'duration': duration,
-      'description': description,
+      'frequency': frequency,
     };
   }
 }

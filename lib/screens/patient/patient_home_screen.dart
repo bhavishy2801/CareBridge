@@ -25,7 +25,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     final user = context.read<AuthProvider>().currentUser;
     if (user != null) {
       final apiService = ApiService();
-      final carePlan = await apiService.getCarePlan(user.id);
+      final carePlans = await apiService.getCarePlans(user.id);
+      final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
       setState(() {
         _carePlan = carePlan;
         _isLoading = false;

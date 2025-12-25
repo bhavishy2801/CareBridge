@@ -1,8 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import 'dart:convert';
 
 class AuthService {
+  static const String baseUrl = 'https://carebridge-xhnj.onrender.com';
   static const String _userKey = 'current_user';
   static const String _tokenKey = 'auth_token';
 
@@ -33,32 +35,82 @@ class AuthService {
   }
 
   Future<User> login(String email, String password, UserRole role) async {
-    // TODO: Replace with actual API call
-    await Future.delayed(const Duration(seconds: 1));
-    
-    final user = User(
-      id: '123',
-      name: 'Demo User',
-      email: email,
-      role: role,
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
+      );
 
-    await saveUser(user, 'demo_token_123');
-    return user;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        final token = data['token'];
+        final userData = data['user'];
+
+        final user = User(
+          id: userData['id'],
+          name: userData['name'],
+          email: userData['email'],
+          role: _parseRole(userData['role']),
+          phoneNumber: userData['phoneNumber'],
+          profileImage: userData['profileImage'],
+        );
+
+        await saveUser(user, token);
+        return user;
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['msg'] ?? error['message'] ?? 'Invalid credentials');
+      }
+    } catch (e) {
+      throw Exception('Login error: $e');
+    }
   }
 
-  Future<User> signup(String name, String email, String password, UserRole role) async {
-    // TODO: Replace with actual API call
-    await Future.delayed(const Duration(seconds: 1));
-    
-    final user = User(
-      id: '123',
-      name: name,
-      email: email,
-      role: role,
-    );
+  Future<String> signup(String name, String email, String password, UserRole role) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': role.toString().split('.').last,
+          'language': 'en',
+        }),
+      );
 
-    await saveUser(user, 'demo_token_123');
-    return user;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        return data['msg'] ?? 'User registered successfully';
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['msg'] ?? error['message'] ?? 'Signup failed');
+      }
+    } catch (e) {
+      throw Exception('Signup error: $e');
+    }
+  }
+
+  UserRole _parseRole(dynamic roleValue) {
+    if (roleValue is String) {
+      switch (roleValue.toLowerCase()) {
+        case 'patient':
+          return UserRole.patient;
+        case 'doctor':
+          return UserRole.doctor;
+        case 'caregiver':
+          return UserRole.caregiver;
+        case 'admin':
+          return UserRole.admin;
+        default:
+          return UserRole.patient;
+      }
+    }
+    return UserRole.patient;
   }
 }
