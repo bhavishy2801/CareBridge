@@ -17,12 +17,12 @@ class ApiService {
   ApiService({this.authToken});
 
   Map<String, String> get headers => {
-        'Content-Type': 'application/json',
-        if (authToken != null) 'Authorization': 'Bearer $authToken',
-      };
+    'Content-Type': 'application/json',
+    if (authToken != null) 'Authorization': 'Bearer $authToken',
+  };
 
   // ========== APPOINTMENTS ==========
-  
+
   /// Create a new appointment (Patient role)
   Future<Appointment> createAppointment({
     required String doctorId,
@@ -106,12 +106,12 @@ class ApiService {
         'instructions': instructions,
         'warningSigns': warningSigns,
       };
-      
+
       if (appointmentId != null) body['appointmentId'] = appointmentId;
       if (pdfUrl != null) body['pdfUrl'] = pdfUrl;
-      
+
       print('Creating care plan with body: ${json.encode(body)}');
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/careplan/'),
         headers: headers,
@@ -125,7 +125,9 @@ class ApiService {
         return CarePlan.fromJson(json.decode(response.body));
       } else {
         final errorBody = response.body;
-        throw Exception('Failed to create care plan (${response.statusCode}): $errorBody');
+        throw Exception(
+          'Failed to create care plan (${response.statusCode}): $errorBody',
+        );
       }
     } catch (e) {
       print('Care plan error: $e');
@@ -134,21 +136,20 @@ class ApiService {
   }
 
   /// Get all care plans for a specific patient
-  Future<List<CarePlan>> getCarePlans(String patientId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/careplan/$patientId'), 
-        headers: headers,
-      );
+  Future<List<CarePlan>> getCarePlans(String patientId, String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/careplan/$patientId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => CarePlan.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to get care plans: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching care plans: $e');
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((e) => CarePlan.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to get care plans: ${response.body}');
     }
   }
 
@@ -338,9 +339,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/sync/dailylogs'),
         headers: headers,
-        body: json.encode({
-          'logs': logs.map((log) => log.toJson()).toList(),
-        }),
+        body: json.encode({'logs': logs.map((log) => log.toJson()).toList()}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -381,7 +380,10 @@ class ApiService {
     return [];
   }
 
-  Future<void> updateAdherence(String patientId, Map<String, bool> adherence) async {
+  Future<void> updateAdherence(
+    String patientId,
+    Map<String, bool> adherence,
+  ) async {
     // This can be mapped to daily logs
     await Future.delayed(const Duration(milliseconds: 500));
   }

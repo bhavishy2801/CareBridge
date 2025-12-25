@@ -27,7 +27,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     final user = context.read<AuthProvider>().currentUser;
     if (user != null) {
       final apiService = ApiService();
-      final carePlans = await apiService.getCarePlans(user.id);
+      final auth = context.read<AuthProvider>();
+      final carePlans = await apiService.getCarePlans(user.id, auth.token!);
       final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
       setState(() {
         _carePlan = carePlan;

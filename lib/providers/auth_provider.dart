@@ -5,12 +5,14 @@ import '../services/auth_service.dart';
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   User? _currentUser;
+  String? _token;
   bool _isLoading = false;
 
   // DEBUG MODE: Set to true to skip login
   static const bool debugMode = false;
   
   User? get currentUser => _currentUser;
+  String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
 
@@ -26,8 +28,10 @@ class AuthProvider extends ChangeNotifier {
         email: 'debug@test.com',
         role: UserRole.patient, // Change to: doctor, patient, caregiver, admin
       );
+      _token = 'debug-token';
     } else {
       _currentUser = await _authService.getCurrentUser();
+      _token = await _authService.getToken();
     }
 
     _isLoading = false;
@@ -67,6 +71,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _currentUser = null;
+    _token = null;
     notifyListeners();
   }
 }
