@@ -137,19 +137,33 @@ class ApiService {
 
   /// Get all care plans for a specific patient
   Future<List<CarePlan>> getCarePlans(String patientId, String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/careplan/$patientId'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/careplan/$patientId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      return data.map((e) => CarePlan.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to get care plans: ${response.body}');
+      print('CarePlan API Response Status: ${response.statusCode}');
+      print('CarePlan API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(response.body);
+        // Handle both array and single object responses
+        if (data is List) {
+          return data.map((e) => CarePlan.fromJson(e)).toList();
+        } else if (data is Map<String, dynamic>) {
+          return [CarePlan.fromJson(data)];
+        }
+        return [];
+      } else {
+        throw Exception('Failed to get care plans: ${response.body}');
+      }
+    } catch (e) {
+      print('CarePlan fetch error: $e');
+      rethrow;
     }
   }
 
