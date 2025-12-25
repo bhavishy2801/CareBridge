@@ -142,7 +142,9 @@ class _DashboardTabState extends State<_DashboardTab> {
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushNamed(context, '/doctor-notifications');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),

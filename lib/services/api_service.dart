@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/symptom_report.dart';
 import '../models/care_plan.dart';
@@ -268,27 +269,6 @@ class ApiService {
     }
   }
 
-  // ========== NOTIFICATIONS ==========
-
-  /// Get all notifications for the authenticated user
-  Future<List<AppNotification>> getNotifications() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/notifications/'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => AppNotification.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to get notifications: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching notifications: $e');
-    }
-  }
-
   // ========== DASHBOARD ==========
 
   /// Get dashboard data for doctor
@@ -412,5 +392,110 @@ class ApiService {
     // TODO: Implement if backend supports
     await Future.delayed(const Duration(milliseconds: 500));
     return {};
+  }
+
+  // ========== NOTIFICATIONS ==========
+
+  /// Get all notifications for the authenticated user
+  Future<List<AppNotification>> getNotifications(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      debugPrint('Notifications API Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(response.body);
+        if (data is List) {
+          return data.map((json) => AppNotification.fromJson(json)).toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to get notifications: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Notifications fetch error: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark a notification as read
+  Future<bool> markNotificationAsRead(
+    String token,
+    String notificationId,
+  ) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/notifications/$notificationId/read'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error marking notification as read: $e');
+      return false;
+    }
+  }
+
+  /// Mark all notifications as read
+  Future<bool> markAllNotificationsAsRead(String token) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/notifications/read-all'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
+      return false;
+    }
+  }
+
+  /// Delete a notification
+  Future<bool> deleteNotification(String token, String notificationId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/notifications/$notificationId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error deleting notification: $e');
+      return false;
+    }
+  }
+
+  /// Delete all notifications
+  Future<bool> deleteAllNotifications(String token) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error deleting all notifications: $e');
+      return false;
+    }
   }
 }
