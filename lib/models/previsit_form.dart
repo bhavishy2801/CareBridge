@@ -19,10 +19,16 @@ class PrevisitForm {
     return PrevisitForm(
       id: json['_id'] ?? json['id'],
       appointmentId: json['appointmentId'],
-      symptoms: List<String>.from(json['symptoms'] ?? []),
+      symptoms:
+          (json['symptoms'] as List?)
+              ?.map((s) => s['name'] as String)
+              .toList() ??
+          [],
       reports: List<String>.from(json['reports'] ?? []),
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
     );
   }
 
@@ -32,11 +38,11 @@ class PrevisitForm {
       'symptoms': symptoms,
       'reports': reports,
     };
-    
+
     if (id != null) data['id'] = id!;
     if (createdAt != null) data['createdAt'] = createdAt!.toIso8601String();
     if (updatedAt != null) data['updatedAt'] = updatedAt!.toIso8601String();
-    
+
     return data;
   }
 }

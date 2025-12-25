@@ -119,7 +119,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() {
         _messages = conversationData.messages;
         // Update partner name from API response
-        if (conversationData.partnerName.isNotEmpty && 
+        if (conversationData.partnerName.isNotEmpty &&
             conversationData.partnerName != 'Unknown') {
           _partnerName = conversationData.partnerName;
         }

@@ -49,9 +49,10 @@ class ChatMessage {
       isRead: json['isRead'] ?? false,
       readAt: json['readAt'] != null ? DateTime.parse(json['readAt']) : null,
       status: json['status'] ?? 'sent',
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
-          : DateTime.now(),
+      createdAt:
+          json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'])
+              : DateTime.now(),
     );
   }
 
@@ -101,7 +102,7 @@ class Conversation {
   factory Conversation.fromJson(Map<String, dynamic> json) {
     final partner = json['partner'] ?? {};
     final lastMessage = json['lastMessage'] ?? {};
-    
+
     return Conversation(
       conversationId: json['conversationId'] ?? '',
       partnerId: partner['id'] ?? '',
@@ -109,9 +110,10 @@ class Conversation {
       partnerName: partner['name'] ?? 'Unknown',
       partnerSpecialization: partner['specialization'],
       lastMessageContent: lastMessage['content'],
-      lastMessageTime: lastMessage['createdAt'] != null 
-          ? DateTime.parse(lastMessage['createdAt']) 
-          : null,
+      lastMessageTime:
+          lastMessage['createdAt'] != null
+              ? DateTime.parse(lastMessage['createdAt'])
+              : null,
       lastMessageIsFromMe: lastMessage['isFromMe'] ?? false,
       unreadCount: json['unreadCount'] ?? 0,
     );
@@ -138,25 +140,27 @@ class ConversationData {
 class ChatService {
   static const String baseUrl = 'https://carebridge-szmf.onrender.com';
   static const String apiUrl = '$baseUrl/api';
-  
+
   final String authToken;
   final String userId;
   final String userType;
-  
+
   io.Socket? _socket;
   bool _isConnected = false;
-  
+
   // Stream controllers for real-time events
   final _messageController = StreamController<ChatMessage>.broadcast();
   final _typingController = StreamController<Map<String, dynamic>>.broadcast();
-  final _onlineStatusController = StreamController<Map<String, bool>>.broadcast();
+  final _onlineStatusController =
+      StreamController<Map<String, bool>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
-  
+
   Stream<ChatMessage> get messageStream => _messageController.stream;
   Stream<Map<String, dynamic>> get typingStream => _typingController.stream;
-  Stream<Map<String, bool>> get onlineStatusStream => _onlineStatusController.stream;
+  Stream<Map<String, bool>> get onlineStatusStream =>
+      _onlineStatusController.stream;
   Stream<bool> get connectionStream => _connectionController.stream;
-  
+
   bool get isConnected => _isConnected;
 
   ChatService({
@@ -219,17 +223,11 @@ class ChatService {
 
     // Listen for typing indicators
     _socket!.on('user_typing', (data) {
-      _typingController.add({
-        'userId': data['userId'],
-        'isTyping': true,
-      });
+      _typingController.add({'userId': data['userId'], 'isTyping': true});
     });
 
     _socket!.on('user_stopped_typing', (data) {
-      _typingController.add({
-        'userId': data['userId'],
-        'isTyping': false,
-      });
+      _typingController.add({'userId': data['userId'], 'isTyping': false});
     });
 
     // Listen for online status
@@ -278,9 +276,7 @@ class ChatService {
   }
 
   void leaveConversation(String partnerId) {
-    _socket?.emit('leave_conversation', {
-      'partnerId': partnerId,
-    });
+    _socket?.emit('leave_conversation', {'partnerId': partnerId});
   }
 
   // =====================
@@ -348,15 +344,15 @@ class ChatService {
         headers: headers,
       );
 
-      print('ChatService.getConversations response status: ${response.statusCode}');
+      print(
+        'ChatService.getConversations response status: ${response.statusCode}',
+      );
       print('ChatService.getConversations response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> conversations = data['conversations'] ?? [];
-        return conversations
-            .map((c) => Conversation.fromJson(c))
-            .toList();
+        return conversations.map((c) => Conversation.fromJson(c)).toList();
       } else {
         throw Exception('Failed to get conversations');
       }
@@ -367,34 +363,37 @@ class ChatService {
 
   // Get conversation history with a specific user
   Future<ConversationData> getConversation(
-    String partnerId, 
+    String partnerId,
     String partnerType, {
     int limit = 50,
     int skip = 0,
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$apiUrl/chat/$partnerId/$partnerType?limit=$limit&skip=$skip'),
+        Uri.parse(
+          '$apiUrl/chat/$partnerId/$partnerType?limit=$limit&skip=$skip',
+        ),
         headers: headers,
       );
 
-      print('ChatService.getConversation response status: ${response.statusCode}');
+      print(
+        'ChatService.getConversation response status: ${response.statusCode}',
+      );
       print('ChatService.getConversation response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> messagesJson = data['messages'] ?? [];
-        final messages = messagesJson
-            .map((m) => ChatMessage.fromJson(m))
-            .toList();
-        
+        final messages =
+            messagesJson.map((m) => ChatMessage.fromJson(m)).toList();
+
         // Extract partner info from response
         final partner = data['partner'] ?? {};
         final partnerName = partner['name'] ?? 'Unknown';
         final partnerEmail = partner['email'] ?? '';
         final partnerSpecialization = partner['specialization'];
         final conversationId = data['conversationId'] ?? '';
-        
+
         return ConversationData(
           messages: messages,
           partnerName: partnerName,
@@ -418,7 +417,9 @@ class ChatService {
         headers: headers,
       );
 
-      print('ChatService.getUnreadCount response status: ${response.statusCode}');
+      print(
+        'ChatService.getUnreadCount response status: ${response.statusCode}',
+      );
       print('ChatService.getUnreadCount response body: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -452,7 +453,9 @@ class ChatService {
         }),
       );
 
-      print('ChatService.sendMessageRest response status: ${response.statusCode}');
+      print(
+        'ChatService.sendMessageRest response status: ${response.statusCode}',
+      );
       print('ChatService.sendMessageRest response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {

@@ -18,12 +18,14 @@ import 'screens/patient/symptom_form_screen.dart';
 import 'screens/patient/care_plan_view_screen.dart';
 import 'screens/patient/daily_tasks_screen.dart';
 import 'screens/patient/patient_notification_screen.dart';
+import 'screens/patient/doctor_detail_screen.dart';
 
 // Screens - Doctor
 import 'screens/doctor/doctor_dashboard_screen.dart';
 import 'screens/doctor/create_care_plan_screen.dart';
 import 'screens/doctor/qr_scanner_screen.dart';
 import 'screens/doctor/doctor_notification_screen.dart';
+import 'screens/doctor/patient_detail_screen.dart';
 
 // Screens - Caregiver
 import 'screens/caregiver/caregiver_dashboard_screen.dart';
@@ -43,7 +45,7 @@ import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize notification service
   await NotificationService().initialize();
 
@@ -86,10 +88,18 @@ class MyApp extends StatelessWidget {
             routes: _createRoutes(),
             onGenerateRoute: (settings) {
               if (settings.name == '/doctor/patient-detail') {
-                final patient = settings.arguments as PatientSummary?;
-                if (patient != null) {
+                // Handle both old PatientSummary and new Map arguments
+                final args = settings.arguments;
+                if (args is PatientSummary) {
+                  // Old behavior - from dashboard patient summary
                   return MaterialPageRoute(
-                    builder: (context) => CreateCarePlanScreen(patient: patient),
+                    builder: (context) => CreateCarePlanScreen(patient: args),
+                  );
+                } else if (args is Map<String, dynamic>) {
+                  // New behavior - from patient cards with full details
+                  return MaterialPageRoute(
+                    builder: (context) => const PatientDetailScreen(),
+                    settings: settings,
                   );
                 }
               }
@@ -127,27 +137,30 @@ class MyApp extends StatelessWidget {
       // Auth routes
       '/login': (context) => const LoginScreen(),
       '/signup': (context) => const SignupScreen(),
-      
+
       // Patient routes
       '/patient/home': (context) => const PatientHomeScreen(),
       '/patient/symptom-form': (context) => const SymptomFormScreen(),
       '/patient/care-plan': (context) => const CarePlanViewScreen(),
       '/patient/tasks': (context) => const DailyTasksScreen(),
       '/patient-notifications': (context) => const PatientNotificationScreen(),
-      
+      '/patient/doctor-detail': (context) => const DoctorDetailScreen(),
+
       // Doctor routes
       '/doctor/dashboard': (context) => const DoctorDashboardScreen(),
       '/doctor/scan-qr': (context) => const QrScannerScreen(),
-      '/doctor/create-care-plan': (context) => const CreateCarePlanFromArgsScreen(),
+      '/doctor/create-care-plan':
+          (context) => const CreateCarePlanFromArgsScreen(),
       '/doctor-notifications': (context) => const DoctorNotificationScreen(),
-      
+
       // Caregiver routes
       '/caregiver/dashboard': (context) => const CaregiverDashboardScreen(),
-      '/caregiver-notifications': (context) => const CaregiverNotificationScreen(),
-      
+      '/caregiver-notifications':
+          (context) => const CaregiverNotificationScreen(),
+
       // Admin routes
       '/admin/panel': (context) => const AdminPanelScreen(),
-      
+
       // Common routes
       '/profile': (context) => const ProfileScreen(),
       '/chat/conversation': (context) => const ConversationScreen(),

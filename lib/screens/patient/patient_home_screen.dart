@@ -42,9 +42,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       );
       final conversations = await chatService.getConversations();
       setState(() {
-        _doctorConversations = {
-          for (var c in conversations) c.partnerId: c
-        };
+        _doctorConversations = {for (var c in conversations) c.partnerId: c};
       });
     } catch (e) {
       print('Failed to load doctor names: $e');
@@ -345,10 +343,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     // Get the actual name from conversations if available
                     final conversation = _doctorConversations[doctor.doctorId];
                     final doctorName = conversation?.partnerName ?? doctor.name;
-                    return _DoctorCard(
-                      doctor: doctor,
-                      doctorName: doctorName,
-                    );
+                    return _DoctorCard(doctor: doctor, doctorName: doctorName);
                   },
                 ),
               ),
@@ -410,7 +405,7 @@ class _DoctorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayName = doctorName ?? doctor.name ?? 'Doctor';
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -424,9 +419,7 @@ class _DoctorCard extends StatelessWidget {
                   radius: 30,
                   backgroundColor: Colors.green[100],
                   child: Text(
-                    displayName.isNotEmpty
-                        ? displayName[0].toUpperCase()
-                        : 'D',
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'D',
                     style: TextStyle(
                       fontSize: 24,
                       color: Colors.green[700],
@@ -469,6 +462,104 @@ class _DoctorCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Hamburger Menu
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'book_appointment':
+                        _showBookAppointmentDialog(context, displayName);
+                        break;
+                      case 'view_appointments':
+                        Navigator.pushNamed(
+                          context,
+                          '/patient/doctor-detail',
+                          arguments: {
+                            'doctorId': doctor.doctorId,
+                            'doctorName': displayName,
+                            'specialization': doctor.specialization,
+                            'email': doctor.email,
+                            'initialTab': 1, // Appointments tab
+                          },
+                        );
+                        break;
+                      case 'view_care_plans':
+                        Navigator.pushNamed(
+                          context,
+                          '/patient/doctor-detail',
+                          arguments: {
+                            'doctorId': doctor.doctorId,
+                            'doctorName': displayName,
+                            'specialization': doctor.specialization,
+                            'email': doctor.email,
+                            'initialTab': 2, // Care Plans tab
+                          },
+                        );
+                        break;
+                      case 'previsit_form':
+                        Navigator.pushNamed(
+                          context,
+                          '/patient/doctor-detail',
+                          arguments: {
+                            'doctorId': doctor.doctorId,
+                            'doctorName': displayName,
+                            'specialization': doctor.specialization,
+                            'email': doctor.email,
+                            'initialTab':
+                                1, // Appointments tab to fill previsit
+                          },
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'book_appointment',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.calendar_month,
+                              color: Colors.blue,
+                            ),
+                            title: Text('Book Appointment'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'view_appointments',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.event_note,
+                              color: Colors.orange,
+                            ),
+                            title: Text('View Appointments'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'view_care_plans',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.medical_services,
+                              color: Colors.green,
+                            ),
+                            title: Text('View Care Plans'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'previsit_form',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.edit_note,
+                              color: Colors.purple,
+                            ),
+                            title: Text('Pre-Visit Forms'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -477,7 +568,16 @@ class _DoctorCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // TODO: View doctor details
+                      Navigator.pushNamed(
+                        context,
+                        '/patient/doctor-detail',
+                        arguments: {
+                          'doctorId': doctor.doctorId,
+                          'doctorName': displayName,
+                          'specialization': doctor.specialization,
+                          'email': doctor.email,
+                        },
+                      );
                     },
                     icon: const Icon(Icons.info_outline, size: 18),
                     label: const Text('Details'),
@@ -507,6 +607,120 @@ class _DoctorCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showBookAppointmentDialog(
+    BuildContext context,
+    String doctorName,
+  ) async {
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  title: const Text('Book Appointment'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Schedule an appointment with Dr. $doctorName'),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.calendar_today),
+                        title: const Text('Date'),
+                        subtitle: Text(
+                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                        ),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (date != null) {
+                            setState(() => selectedDate = date);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.access_time),
+                        title: const Text('Time'),
+                        subtitle: Text(selectedTime.format(context)),
+                        onTap: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: selectedTime,
+                          );
+                          if (time != null) {
+                            setState(() => selectedTime = time);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Book'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+
+    if (result == true && context.mounted) {
+      final dateTime = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        selectedTime.hour,
+        selectedTime.minute,
+      );
+      await _bookAppointment(context, dateTime);
+    }
+  }
+
+  Future<void> _bookAppointment(BuildContext context, DateTime dateTime) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+
+    if (token == null) return;
+
+    try {
+      final apiService = ApiService(authToken: token);
+      await apiService.createAppointment(
+        doctorId: doctor.doctorId,
+        date: dateTime,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Appointment booked successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to book appointment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -590,17 +804,19 @@ class _ChatListWidgetState extends State<_ChatListWidget> {
           final conversation = _conversations[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: conversation.partnerType.toLowerCase() == 'doctor'
-                  ? Colors.green[100]
-                  : Colors.blue[100],
+              backgroundColor:
+                  conversation.partnerType.toLowerCase() == 'doctor'
+                      ? Colors.green[100]
+                      : Colors.blue[100],
               child: Text(
                 conversation.partnerName.isNotEmpty
                     ? conversation.partnerName[0].toUpperCase()
                     : '?',
                 style: TextStyle(
-                  color: conversation.partnerType.toLowerCase() == 'doctor'
-                      ? Colors.green
-                      : Colors.blue,
+                  color:
+                      conversation.partnerType.toLowerCase() == 'doctor'
+                          ? Colors.green
+                          : Colors.blue,
                 ),
               ),
             ),
@@ -614,16 +830,20 @@ class _ChatListWidgetState extends State<_ChatListWidget> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: conversation.unreadCount > 0
-                ? CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.red,
-                    child: Text(
-                      conversation.unreadCount.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  )
-                : const Icon(Icons.chevron_right),
+            trailing:
+                conversation.unreadCount > 0
+                    ? CircleAvatar(
+                      radius: 12,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        conversation.unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                    : const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.pushNamed(
                 context,

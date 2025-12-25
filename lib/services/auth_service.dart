@@ -117,7 +117,8 @@ class AuthService {
         body['age'] = age;
         body['bloodGroup'] = bloodGroup;
         if (address != null) body['address'] = address;
-        if (emergencyContact != null) body['emergencyContact'] = emergencyContact;
+        if (emergencyContact != null)
+          body['emergencyContact'] = emergencyContact;
       }
 
       if (role == UserRole.doctor) {
@@ -193,7 +194,9 @@ class AuthService {
         },
       );
 
-      print('AuthService.getProfileWithToken response status: ${response.statusCode}');
+      print(
+        'AuthService.getProfileWithToken response status: ${response.statusCode}',
+      );
       print('AuthService.getProfileWithToken response body: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -222,7 +225,9 @@ class AuthService {
         body: json.encode(updates),
       );
 
-      print('AuthService.updateProfile response status: ${response.statusCode}');
+      print(
+        'AuthService.updateProfile response status: ${response.statusCode}',
+      );
       print('AuthService.updateProfile response body: ${response.body}');
 
       if (response.statusCode == 200) {
