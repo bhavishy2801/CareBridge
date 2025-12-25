@@ -98,17 +98,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Future<void> _loadMessages() async {
-    if (_chatService == null) return;
-    
+    if (_chatService == null) {
+      print('❌ ChatService is null. Cannot load messages.');
+      return;
+    }
+
     try {
+      print('🔄 Loading messages for partnerId: $_partnerId, partnerType: $_partnerType');
       setState(() => _isLoading = true);
       final messages = await _chatService!.getConversation(_partnerId, _partnerType);
+      print('✅ Messages loaded: ${messages.length} messages');
       setState(() {
         _messages = messages;
         _isLoading = false;
       });
       _scrollToBottom();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Failed to load messages: $e');
+      print('Stack trace: $stackTrace');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

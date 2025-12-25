@@ -119,7 +119,7 @@ class Conversation {
 }
 
 class ChatService {
-  static const String baseUrl = 'https://carebridge-xhnj.onrender.com';
+  static const String baseUrl = 'https://carebridge-szmf.onrender.com';
   static const String apiUrl = '$baseUrl/api';
   
   final String authToken;
