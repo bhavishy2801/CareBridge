@@ -59,9 +59,9 @@ class AuthService {
         final userData = data['user'];
 
         final user = User(
-          id: userData['id'],
-          name: userData['name'],
-          email: userData['email'],
+          id: userData['id'] ?? userData['_id'] ?? '',
+          name: userData['name'] ?? '',
+          email: userData['email'] ?? email,
           role: _parseRole(userData['role']),
           gender: userData['gender'],
           age: userData['age'],
