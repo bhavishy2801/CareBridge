@@ -50,8 +50,10 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
         title: const Text('Caregiver Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {},
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              Navigator.pushNamed(context, '/caregiver-notifications');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),

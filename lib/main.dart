@@ -17,14 +17,17 @@ import 'screens/patient/patient_home_screen.dart';
 import 'screens/patient/symptom_form_screen.dart';
 import 'screens/patient/care_plan_view_screen.dart';
 import 'screens/patient/daily_tasks_screen.dart';
+import 'screens/patient/patient_notification_screen.dart';
 
 // Screens - Doctor
 import 'screens/doctor/doctor_dashboard_screen.dart';
 import 'screens/doctor/create_care_plan_screen.dart';
 import 'screens/doctor/qr_scanner_screen.dart';
+import 'screens/doctor/doctor_notification_screen.dart';
 
 // Screens - Caregiver
 import 'screens/caregiver/caregiver_dashboard_screen.dart';
+import 'screens/caregiver/caregiver_notification_screen.dart';
 
 // Screens - Admin
 import 'screens/admin/admin_panel_screen.dart';
@@ -121,20 +124,33 @@ class MyApp extends StatelessWidget {
 
   Map<String, WidgetBuilder> _createRoutes() {
     return {
+      // Auth routes
       '/login': (context) => const LoginScreen(),
       '/signup': (context) => const SignupScreen(),
+      
+      // Patient routes
       '/patient/home': (context) => const PatientHomeScreen(),
       '/patient/symptom-form': (context) => const SymptomFormScreen(),
       '/patient/care-plan': (context) => const CarePlanViewScreen(),
       '/patient/tasks': (context) => const DailyTasksScreen(),
+      '/patient-notifications': (context) => const PatientNotificationScreen(),
+      
+      // Doctor routes
       '/doctor/dashboard': (context) => const DoctorDashboardScreen(),
       '/doctor/scan-qr': (context) => const QrScannerScreen(),
       '/doctor/create-care-plan': (context) => const CreateCarePlanFromArgsScreen(),
+      '/doctor-notifications': (context) => const DoctorNotificationScreen(),
+      
+      // Caregiver routes
       '/caregiver/dashboard': (context) => const CaregiverDashboardScreen(),
+      '/caregiver-notifications': (context) => const CaregiverNotificationScreen(),
+      
+      // Admin routes
       '/admin/panel': (context) => const AdminPanelScreen(),
+      
+      // Common routes
       '/profile': (context) => const ProfileScreen(),
       '/chat/conversation': (context) => const ConversationScreen(),
     };
   }
 }
-

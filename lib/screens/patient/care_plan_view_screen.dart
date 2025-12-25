@@ -15,6 +15,7 @@ class CarePlanViewScreen extends StatefulWidget {
 class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
   Map<String, List<CarePlan>> _groupedCarePlans = {};
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -23,23 +24,38 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
   }
 
   Future<void> _loadCarePlan() async {
-    final user = context.read<AuthProvider>().currentUser;
-    if (user != null) {
-      final apiService = ApiService();
-      final auth = context.read<AuthProvider>();
-      final carePlans = await apiService.getCarePlans(user.id, auth.token!);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      // Group care plans by doctor
-      final Map<String, List<CarePlan>> groupedCarePlans = {};
-      for (var plan in carePlans) {
-        final doctorName = plan.doctorId ?? 'Unknown Doctor';
-        groupedCarePlans.putIfAbsent(doctorName, () => []).add(plan);
+    try {
+      final user = context.read<AuthProvider>().currentUser;
+      if (user != null) {
+        final apiService = ApiService();
+        final auth = context.read<AuthProvider>();
+        final carePlans = await apiService.getCarePlans(user.id, auth.token!);
+        final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
+        if (mounted) {
+          setState(() {
+            _carePlan = carePlan;
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'User not logged in';
+        });
       }
-
-      setState(() {
-        _groupedCarePlans = groupedCarePlans;
-        _isLoading = false;
-      });
+    } catch (e) {
+      print('Error loading care plan: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load care plan: $e';
+        });
+      }
     }
   }
 
@@ -48,14 +64,10 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
       final user = context.read<AuthProvider>().currentUser;
       final pdfService = PdfService();
       try {
-        for (var carePlanList in _groupedCarePlans.values) {
-          for (var carePlan in carePlanList) {
-            await pdfService.generateCarePlanPdf(
-              carePlan,
-              user?.name ?? 'Patient',
-            );
-          }
-        }
+        await pdfService.generateCarePlanPdf(
+          _carePlan!,
+          user?.name ?? 'Patient',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('PDFs generated successfully')),
@@ -65,7 +77,7 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error generating PDFs: $e')));
+          ).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
         }
       }
     }
@@ -74,111 +86,199 @@ class _CarePlanViewScreenState extends State<CarePlanViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Care Plans')),
+      appBar: AppBar(
+        title: const Text('My Care Plan'),
+        actions: [
+          if (_carePlan != null)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              onPressed: _generatePdf,
+              tooltip: 'Download PDF',
+            ),
+        ],
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : DefaultTabController(
-                length: _groupedCarePlans.keys.length,
+              : _errorMessage != null
+              ? Center(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TabBar(
-                      isScrollable: true,
-                      tabs:
-                          _groupedCarePlans.keys
-                              .map((doctorName) => Tab(text: doctorName))
-                              .toList(),
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children:
-                            _groupedCarePlans.keys.map((doctorName) {
-                              final plans = _groupedCarePlans[doctorName]!;
-                              return ListView.builder(
-                                itemCount: plans.length,
-                                itemBuilder: (context, index) {
-                                  final plan = plans[index];
-                                  return Card(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Care Plan ${index + 1}',
-                                            style:
-                                                Theme.of(
-                                                  context,
-                                                ).textTheme.titleLarge,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text('Created: ${plan.createdAt}'),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Medications',
-                                            style:
-                                                Theme.of(
-                                                  context,
-                                                ).textTheme.titleMedium,
-                                          ),
-                                          ...plan.medications.map(
-                                            (med) => ListTile(
-                                              leading: const Icon(
-                                                Icons.medication,
-                                              ),
-                                              title: Text(med.name),
-                                              subtitle: Text(
-                                                'Dosage: ${med.dosage}, Frequency: ${med.frequency}, Duration: ${med.duration}',
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Exercises',
-                                            style:
-                                                Theme.of(
-                                                  context,
-                                                ).textTheme.titleMedium,
-                                          ),
-                                          ...plan.exercises.map(
-                                            (ex) => ListTile(
-                                              leading: const Icon(
-                                                Icons.fitness_center,
-                                              ),
-                                              title: Text(ex.name),
-                                              subtitle: Text(
-                                                'Duration: ${ex.duration}, Frequency: ${ex.frequency}',
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Instructions',
-                                            style:
-                                                Theme.of(
-                                                  context,
-                                                ).textTheme.titleMedium,
-                                          ),
-                                          Text(plan.instructions),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Warning Signs',
-                                            style:
-                                                Theme.of(
-                                                  context,
-                                                ).textTheme.titleMedium,
-                                          ),
-                                          Text(plan.warningSigns),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            }).toList(),
+                    Icon(Icons.error_outline, size: 80, color: Colors.red[400]),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        _errorMessage!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadCarePlan,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+              : _carePlan == null
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.medical_information_outlined,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No care plan available',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your doctor will create a care plan for you',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              )
+              : RefreshIndicator(
+                onRefresh: _loadCarePlan,
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
+                    // Care Plan Info
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Care Plan',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Created: ${_carePlan!.createdAt.toString().split(' ')[0]}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Medications
+                    Text(
+                      'Medications',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_carePlan!.medications.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('No medications prescribed'),
+                        ),
+                      )
+                    else
+                      ..._carePlan!.medications.map(
+                        (med) => Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.medication),
+                            ),
+                            title: Text(med.name),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Dosage: ${med.dosage}'),
+                                Text('Frequency: ${med.frequency}'),
+                                if (med.duration != null)
+                                  Text('Duration: ${med.duration}'),
+                              ],
+                            ),
+                            isThreeLine: true,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Exercises
+                    Text(
+                      'Exercises',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_carePlan!.exercises.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('No exercises recommended'),
+                        ),
+                      )
+                    else
+                      ..._carePlan!.exercises.map(
+                        (ex) => Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.fitness_center),
+                            ),
+                            title: Text(ex.name),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Duration: ${ex.duration}'),
+                                Text('Frequency: ${ex.frequency}'),
+                              ],
+                            ),
+                            isThreeLine: true,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Instructions
+                    if (_carePlan!.instructions.isNotEmpty) ...[
+                      Text(
+                        'General Instructions',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children:
+                                _carePlan!.instructions
+                                    .split('\n')
+                                    .where((line) => line.trim().isNotEmpty)
+                                    .map(
+                                      (instruction) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8.0,
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text('• '),
+                                            Expanded(child: Text(instruction)),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

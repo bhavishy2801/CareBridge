@@ -94,7 +94,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // TODO: Navigate to notifications
+              Navigator.pushNamed(context, '/patient-notifications');
             },
           ),
           IconButton(
