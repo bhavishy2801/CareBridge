@@ -1,6 +1,6 @@
-const mongoose=require("mongoose");
+const mongoose = require("mongoose");
 
-const NotificationSchema=new mongoose.Schema({
+const NotificationSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -9,7 +9,7 @@ const NotificationSchema=new mongoose.Schema({
 
   type: {
     type: String,
-    enum: ["reminder","alert","info"],
+    enum: ["reminder", "alert", "info", "medication", "appointment", "message", "care_plan", "vitals", "exercise", "missed_task", "general"],
     default: "info"
   },
 
@@ -26,11 +26,16 @@ const NotificationSchema=new mongoose.Schema({
   relatedEntity: {
     entityType: {
       type: String,
-      enum: ["careplan","appointment","dailylog"],
+      enum: ["careplan", "appointment", "dailylog", "patient", "doctor", "caregiver"],
     },
     entityId: {
       type: mongoose.Schema.Types.ObjectId
     }
+  },
+
+  data: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
   },
 
   scheduledAt: {
@@ -48,4 +53,4 @@ const NotificationSchema=new mongoose.Schema({
   }
 });
 
-module.exports=mongoose.model("Notification",NotificationSchema);
+module.exports = mongoose.model("Notification", NotificationSchema);
