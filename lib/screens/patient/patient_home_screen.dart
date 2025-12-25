@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/care_plan.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../services/chat_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -16,11 +17,43 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   CarePlan? _carePlan;
   bool _isLoading = true;
   int _currentIndex = 0;
+  Map<String, Conversation> _doctorConversations = {};
 
   @override
   void initState() {
     super.initState();
     _loadCarePlan();
+    _refreshProfile();
+    _loadDoctorNames();
+  }
+
+  Future<void> _loadDoctorNames() async {
+    final auth = context.read<AuthProvider>();
+    final user = auth.currentUser;
+    final token = auth.token;
+
+    if (user == null || token == null) return;
+
+    try {
+      final chatService = ChatService(
+        authToken: token,
+        userId: user.id,
+        userType: user.role.name,
+      );
+      final conversations = await chatService.getConversations();
+      setState(() {
+        _doctorConversations = {
+          for (var c in conversations) c.partnerId: c
+        };
+      });
+    } catch (e) {
+      print('Failed to load doctor names: $e');
+    }
+  }
+
+  Future<void> _refreshProfile() async {
+    final auth = context.read<AuthProvider>();
+    await auth.refreshUser();
   }
 
   Future<void> _loadCarePlan() async {
@@ -46,11 +79,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: [
-          _buildHomeTab(),
-          _buildDoctorsTab(),
-          _buildChatsTab(),
-        ],
+        children: [_buildHomeTab(), _buildDoctorsTab(), _buildChatsTab()],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -220,9 +249,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     children: [
                       if (_carePlan!.medications.isNotEmpty)
                         ListTile(
-                          leading: const Icon(Icons.medication, color: Colors.red),
+                          leading: const Icon(
+                            Icons.medication,
+                            color: Colors.red,
+                          ),
                           title: Text(
-                              '${_carePlan!.medications.length} Medications'),
+                            '${_carePlan!.medications.length} Medications',
+                          ),
                           subtitle: const Text('Tap to view details'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -231,10 +264,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         ),
                       if (_carePlan!.exercises.isNotEmpty)
                         ListTile(
-                          leading:
-                              const Icon(Icons.fitness_center, color: Colors.blue),
-                          title:
-                              Text('${_carePlan!.exercises.length} Exercises'),
+                          leading: const Icon(
+                            Icons.fitness_center,
+                            color: Colors.blue,
+                          ),
+                          title: Text(
+                            '${_carePlan!.exercises.length} Exercises',
+                          ),
                           subtitle: const Text('Tap to view details'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -265,57 +301,63 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     final doctors = user?.associatedDoctors ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Doctors'),
-      ),
-      body: doctors.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.medical_services_outlined,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No doctors yet',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Show your QR code to a doctor\nto get connected',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/profile');
-                    },
-                    icon: const Icon(Icons.qr_code),
-                    label: const Text('Show My QR Code'),
-                  ),
-                ],
+      appBar: AppBar(title: const Text('My Doctors')),
+      body:
+          doctors.isEmpty
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.medical_services_outlined,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No doctors yet',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Show your QR code to a doctor\nto get connected',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/profile');
+                      },
+                      icon: const Icon(Icons.qr_code),
+                      label: const Text('Show My QR Code'),
+                    ),
+                  ],
+                ),
+              )
+              : RefreshIndicator(
+                onRefresh: _loadDoctorNames,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: doctors.length,
+                  itemBuilder: (context, index) {
+                    final doctor = doctors[index];
+                    // Get the actual name from conversations if available
+                    final conversation = _doctorConversations[doctor.doctorId];
+                    final doctorName = conversation?.partnerName ?? doctor.name;
+                    return _DoctorCard(
+                      doctor: doctor,
+                      doctorName: doctorName,
+                    );
+                  },
+                ),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: doctors.length,
-              itemBuilder: (context, index) {
-                final doctor = doctors[index];
-                return _DoctorCard(doctor: doctor);
-              },
-            ),
     );
   }
 
   Widget _buildChatsTab() {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-      ),
+      appBar: AppBar(title: const Text('Messages')),
       body: const _ChatListWidget(),
     );
   }
@@ -361,11 +403,14 @@ class _ActionCard extends StatelessWidget {
 
 class _DoctorCard extends StatelessWidget {
   final AssociatedDoctor doctor;
+  final String? doctorName;
 
-  const _DoctorCard({required this.doctor});
+  const _DoctorCard({required this.doctor, this.doctorName});
 
   @override
   Widget build(BuildContext context) {
+    final displayName = doctorName ?? doctor.name ?? 'Doctor';
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -379,8 +424,8 @@ class _DoctorCard extends StatelessWidget {
                   radius: 30,
                   backgroundColor: Colors.green[100],
                   child: Text(
-                    doctor.name?.isNotEmpty == true
-                        ? doctor.name![0].toUpperCase()
+                    displayName.isNotEmpty
+                        ? displayName[0].toUpperCase()
                         : 'D',
                     style: TextStyle(
                       fontSize: 24,
@@ -395,10 +440,9 @@ class _DoctorCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        doctor.name ?? 'Doctor',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        'Dr. $displayName',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Container(
@@ -411,7 +455,9 @@ class _DoctorCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          doctor.specialization?.replaceAll('_', ' ').toUpperCase() ?? 
+                          doctor.specialization
+                                  ?.replaceAll('_', ' ')
+                                  .toUpperCase() ??
                               'SPECIALIST',
                           style: TextStyle(
                             fontSize: 12,
@@ -447,7 +493,7 @@ class _DoctorCard extends StatelessWidget {
                         arguments: {
                           'partnerId': doctor.doctorId,
                           'partnerType': 'Doctor',
-                          'partnerName': doctor.name ?? 'Doctor',
+                          'partnerName': displayName,
                         },
                       );
                     },
@@ -464,24 +510,62 @@ class _DoctorCard extends StatelessWidget {
   }
 }
 
-class _ChatListWidget extends StatelessWidget {
+class _ChatListWidget extends StatefulWidget {
   const _ChatListWidget();
 
   @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-    final doctors = user?.associatedDoctors ?? [];
+  State<_ChatListWidget> createState() => _ChatListWidgetState();
+}
 
-    if (doctors.isEmpty) {
+class _ChatListWidgetState extends State<_ChatListWidget> {
+  List<Conversation> _conversations = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    final auth = context.read<AuthProvider>();
+    final user = auth.currentUser;
+    final token = auth.token;
+
+    if (user == null || token == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final chatService = ChatService(
+        authToken: token,
+        userId: user.id,
+        userType: user.role.name,
+      );
+      final conversations = await chatService.getConversations();
+      setState(() {
+        _conversations = conversations;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Failed to load conversations: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_conversations.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No conversations yet',
@@ -497,39 +581,63 @@ class _ChatListWidget extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: doctors.length,
-      itemBuilder: (context, index) {
-        final doctor = doctors[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.green[100],
-            child: Text(
-              doctor.name?.isNotEmpty == true
-                  ? doctor.name![0].toUpperCase()
-                  : 'D',
-              style: const TextStyle(color: Colors.green),
+    return RefreshIndicator(
+      onRefresh: _loadConversations,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _conversations.length,
+        itemBuilder: (context, index) {
+          final conversation = _conversations[index];
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: conversation.partnerType.toLowerCase() == 'doctor'
+                  ? Colors.green[100]
+                  : Colors.blue[100],
+              child: Text(
+                conversation.partnerName.isNotEmpty
+                    ? conversation.partnerName[0].toUpperCase()
+                    : '?',
+                style: TextStyle(
+                  color: conversation.partnerType.toLowerCase() == 'doctor'
+                      ? Colors.green
+                      : Colors.blue,
+                ),
+              ),
             ),
-          ),
-          title: Text(doctor.name ?? 'Doctor'),
-          subtitle: Text(
-            doctor.specialization?.replaceAll('_', ' ') ?? 'Specialist',
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/chat/conversation',
-              arguments: {
-                'partnerId': doctor.doctorId,
-                'partnerType': 'Doctor',
-                'partnerName': doctor.name ?? 'Doctor',
-              },
-            );
-          },
-        );
-      },
+            title: Text(
+              conversation.partnerType.toLowerCase() == 'doctor'
+                  ? 'Dr. ${conversation.partnerName}'
+                  : conversation.partnerName,
+            ),
+            subtitle: Text(
+              conversation.lastMessageContent ?? 'No messages yet',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: conversation.unreadCount > 0
+                ? CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.red,
+                    child: Text(
+                      conversation.unreadCount.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                '/chat/conversation',
+                arguments: {
+                  'partnerId': conversation.partnerId,
+                  'partnerType': conversation.partnerType,
+                  'partnerName': conversation.partnerName,
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

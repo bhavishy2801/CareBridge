@@ -63,12 +63,19 @@ class AssociationService {
         headers: headers,
       );
 
+      print('AssociationService.getMyAssociations response status: ${response.statusCode}');
+      print('AssociationService.getMyAssociations response body: ${response.body}');
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to get associations');
+        final error = json.decode(response.body);
+        final msg = error['msg'] ?? error['message'] ?? 'Failed to get associations';
+        print('❌ AssociationService.getMyAssociations error: $msg');
+        throw Exception(msg);
       }
     } catch (e) {
+      print('❌ Exception in getMyAssociations: $e');
       throw Exception('Get associations error: $e');
     }
   }
@@ -84,6 +91,9 @@ class AssociationService {
         headers: headers,
       );
 
+      print('AssociationService.getPatientByQr response status: ${response.statusCode}');
+      print('AssociationService.getPatientByQr response body: ${response.body}');
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -91,6 +101,7 @@ class AssociationService {
         throw Exception(error['msg'] ?? 'Patient not found');
       }
     } catch (e) {
+      print('❌ Exception in getPatientByQr: $e');
       throw Exception('Get patient error: $e');
     }
   }
@@ -110,12 +121,16 @@ class AssociationService {
         }),
       );
 
+      print('AssociationService.canCommunicate response status: ${response.statusCode}');
+      print('AssociationService.canCommunicate response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['canCommunicate'] ?? false;
       }
       return false;
     } catch (e) {
+      print('❌ Exception in canCommunicate: $e');
       return false;
     }
   }
@@ -131,11 +146,15 @@ class AssociationService {
         headers: headers,
       );
 
+      print('AssociationService.deactivateAssociation response status: ${response.statusCode}');
+      print('AssociationService.deactivateAssociation response body: ${response.body}');
+
       if (response.statusCode != 200) {
         final error = json.decode(response.body);
         throw Exception(error['msg'] ?? 'Failed to deactivate association');
       }
     } catch (e) {
+      print('❌ Exception in deactivateAssociation: $e');
       throw Exception('Deactivate association error: $e');
     }
   }
@@ -155,11 +174,15 @@ class AssociationService {
         }),
       );
 
+      print('AssociationService.updateLastVisit response status: ${response.statusCode}');
+      print('AssociationService.updateLastVisit response body: ${response.body}');
+
       if (response.statusCode != 200) {
         final error = json.decode(response.body);
         throw Exception(error['msg'] ?? 'Failed to update visit');
       }
     } catch (e) {
+      print('Exception in updateLastVisit: $e');
       throw Exception('Update visit error: $e');
     }
   }

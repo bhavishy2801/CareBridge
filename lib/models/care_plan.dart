@@ -9,6 +9,8 @@ class CarePlan {
   final String instructions;
   final String warningSigns;
   final String? pdfUrl;
+  final String? doctorName;
+  final String? patientName;
 
   CarePlan({
     required this.id,
@@ -21,6 +23,8 @@ class CarePlan {
     required this.instructions,
     required this.warningSigns,
     this.pdfUrl,
+    this.doctorName,
+    this.patientName,
   });
 
   factory CarePlan.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,8 @@ class CarePlan {
       instructions: json['instructions'] ?? '',
       warningSigns: json['warningSigns'] ?? '',
       pdfUrl: json['pdfUrl'],
+      doctorName: json['doctorName'],
+      patientName: json['patientName'],
     );
   }
 
@@ -54,6 +60,8 @@ class CarePlan {
       'instructions': instructions,
       'warningSigns': warningSigns,
       'pdfUrl': pdfUrl,
+      'doctorName': doctorName,
+      'patientName': patientName,
     };
   }
 }

@@ -118,6 +118,23 @@ class Conversation {
   }
 }
 
+// Conversation data with partner info
+class ConversationData {
+  final List<ChatMessage> messages;
+  final String partnerName;
+  final String partnerEmail;
+  final String? partnerSpecialization;
+  final String conversationId;
+
+  ConversationData({
+    required this.messages,
+    required this.partnerName,
+    required this.partnerEmail,
+    this.partnerSpecialization,
+    required this.conversationId,
+  });
+}
+
 class ChatService {
   static const String baseUrl = 'https://carebridge-szmf.onrender.com';
   static const String apiUrl = '$baseUrl/api';
@@ -331,6 +348,9 @@ class ChatService {
         headers: headers,
       );
 
+      print('ChatService.getConversations response status: ${response.statusCode}');
+      print('ChatService.getConversations response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> conversations = data['conversations'] ?? [];
@@ -346,7 +366,7 @@ class ChatService {
   }
 
   // Get conversation history with a specific user
-  Future<List<ChatMessage>> getConversation(
+  Future<ConversationData> getConversation(
     String partnerId, 
     String partnerType, {
     int limit = 50,
@@ -358,12 +378,30 @@ class ChatService {
         headers: headers,
       );
 
+      print('ChatService.getConversation response status: ${response.statusCode}');
+      print('ChatService.getConversation response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> messages = data['messages'] ?? [];
-        return messages
+        final List<dynamic> messagesJson = data['messages'] ?? [];
+        final messages = messagesJson
             .map((m) => ChatMessage.fromJson(m))
             .toList();
+        
+        // Extract partner info from response
+        final partner = data['partner'] ?? {};
+        final partnerName = partner['name'] ?? 'Unknown';
+        final partnerEmail = partner['email'] ?? '';
+        final partnerSpecialization = partner['specialization'];
+        final conversationId = data['conversationId'] ?? '';
+        
+        return ConversationData(
+          messages: messages,
+          partnerName: partnerName,
+          partnerEmail: partnerEmail,
+          partnerSpecialization: partnerSpecialization,
+          conversationId: conversationId,
+        );
       } else {
         throw Exception('Failed to get conversation');
       }
@@ -379,6 +417,9 @@ class ChatService {
         Uri.parse('$apiUrl/chat/unread'),
         headers: headers,
       );
+
+      print('ChatService.getUnreadCount response status: ${response.statusCode}');
+      print('ChatService.getUnreadCount response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -410,6 +451,9 @@ class ChatService {
           if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
         }),
       );
+
+      print('ChatService.sendMessageRest response status: ${response.statusCode}');
+      print('ChatService.sendMessageRest response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);

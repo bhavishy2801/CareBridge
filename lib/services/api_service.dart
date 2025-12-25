@@ -39,6 +39,9 @@ class ApiService {
         }),
       );
 
+      print('ApiService.createAppointment response status: ${response.statusCode}');
+      print('ApiService.createAppointment response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return Appointment.fromJson(json.decode(response.body));
       } else {
@@ -56,6 +59,9 @@ class ApiService {
         Uri.parse('$baseUrl/appointments/doctor'),
         headers: headers,
       );
+
+      print('ApiService.getDoctorAppointments response status: ${response.statusCode}');
+      print('ApiService.getDoctorAppointments response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -75,6 +81,9 @@ class ApiService {
         Uri.parse('$baseUrl/appointments/patient'),
         headers: headers,
       );
+
+      print('ApiService.getPatientAppointments response status: ${response.statusCode}');
+      print('ApiService.getPatientAppointments response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -191,6 +200,9 @@ class ApiService {
         }),
       );
 
+      print('ApiService.createDailyLog response status: ${response.statusCode}');
+      print('ApiService.createDailyLog response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return DailyLog.fromJson(json.decode(response.body));
       } else {
@@ -208,6 +220,9 @@ class ApiService {
         Uri.parse('$baseUrl/dailylog/$patientId'),
         headers: headers,
       );
+
+      print('ApiService.getDailyLogs response status: ${response.statusCode}');
+      print('ApiService.getDailyLogs response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -239,6 +254,9 @@ class ApiService {
         }),
       );
 
+      print('ApiService.createPrevisitForm response status: ${response.statusCode}');
+      print('ApiService.createPrevisitForm response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return PrevisitForm.fromJson(json.decode(response.body));
       } else {
@@ -256,6 +274,9 @@ class ApiService {
         Uri.parse('$baseUrl/previsit/$appointmentId'),
         headers: headers,
       );
+
+      print('ApiService.getPrevisitForm response status: ${response.statusCode}');
+      print('ApiService.getPrevisitForm response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return PrevisitForm.fromJson(json.decode(response.body));
@@ -279,6 +300,9 @@ class ApiService {
         headers: headers,
       );
 
+      print('ApiService.getDoctorDashboard response status: ${response.statusCode}');
+      print('ApiService.getDoctorDashboard response body: ${response.body}');
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -297,6 +321,9 @@ class ApiService {
         headers: headers,
       );
 
+      print('ApiService.getPatientDashboard response status: ${response.statusCode}');
+      print('ApiService.getPatientDashboard response body: ${response.body}');
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -314,6 +341,9 @@ class ApiService {
         Uri.parse('$baseUrl/dashboard/caregiver'),
         headers: headers,
       );
+
+      print('ApiService.getCaregiverDashboard response status: ${response.statusCode}');
+      print('ApiService.getCaregiverDashboard response body: ${response.body}');
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -335,6 +365,9 @@ class ApiService {
         headers: headers,
         body: json.encode({'logs': logs.map((log) => log.toJson()).toList()}),
       );
+
+      print('ApiService.syncDailyLogs response status: ${response.statusCode}');
+      print('ApiService.syncDailyLogs response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -414,6 +447,8 @@ class ApiService {
         if (data is List) {
           return data.map((json) => AppNotification.fromJson(json)).toList();
         }
+        print('ApiService.getNotifications response status: ${response.statusCode}');
+        print('ApiService.getNotifications response body: ${response.body}');
         return [];
       } else {
         throw Exception('Failed to get notifications: ${response.body}');
@@ -423,6 +458,8 @@ class ApiService {
       rethrow;
     }
   }
+
+       
 
   /// Mark a notification as read
   Future<bool> markNotificationAsRead(

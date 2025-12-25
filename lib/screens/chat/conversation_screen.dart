@@ -110,13 +110,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
         '🔄 Loading messages for partnerId: $_partnerId, partnerType: $_partnerType',
       );
       setState(() => _isLoading = true);
-      final messages = await _chatService!.getConversation(
+      final conversationData = await _chatService!.getConversation(
         _partnerId,
         _partnerType,
       );
-      print('✅ Messages loaded: ${messages.length} messages');
+      print('✅ Messages loaded: ${conversationData.messages.length} messages');
+      print('✅ Partner name from API: ${conversationData.partnerName}');
       setState(() {
-        _messages = messages;
+        _messages = conversationData.messages;
+        // Update partner name from API response
+        if (conversationData.partnerName.isNotEmpty && 
+            conversationData.partnerName != 'Unknown') {
+          _partnerName = conversationData.partnerName;
+        }
         _isLoading = false;
       });
       _scrollToBottom();

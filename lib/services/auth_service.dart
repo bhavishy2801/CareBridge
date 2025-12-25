@@ -64,6 +64,9 @@ class AuthService {
         }),
       );
 
+      print('AuthService.login response status: ${response.statusCode}');
+      print('AuthService.login response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final token = data['token'];
@@ -127,6 +130,9 @@ class AuthService {
         body: json.encode(body),
       );
 
+      print('AuthService.signup response status: ${response.statusCode}');
+      print('AuthService.signup response body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
         return {
@@ -160,6 +166,9 @@ class AuthService {
         },
       );
 
+      print('AuthService.getProfile response status: ${response.statusCode}');
+      print('AuthService.getProfile response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final user = User.fromJson(data['user']);
@@ -183,6 +192,9 @@ class AuthService {
           'Authorization': 'Bearer $token',
         },
       );
+
+      print('AuthService.getProfileWithToken response status: ${response.statusCode}');
+      print('AuthService.getProfileWithToken response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -209,6 +221,9 @@ class AuthService {
         },
         body: json.encode(updates),
       );
+
+      print('AuthService.updateProfile response status: ${response.statusCode}');
+      print('AuthService.updateProfile response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
