@@ -126,9 +126,8 @@ const DoctorSchema = new mongoose.Schema({
 });
 
 // Update timestamp on save
-DoctorSchema.pre("save", function (next) {
+DoctorSchema.pre("save", function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 // Method to check if associated with a specific patient

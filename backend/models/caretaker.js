@@ -97,9 +97,8 @@ const CaretakerSchema = new mongoose.Schema({
 });
 
 // Update timestamp on save
-CaretakerSchema.pre("save", function (next) {
+CaretakerSchema.pre("save", function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 // Method to check if associated with a specific patient
