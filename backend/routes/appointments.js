@@ -6,6 +6,7 @@ const role = require("../middleware/role");
 const Appointment = require("../models/appointment");
 const Doctor = require("../models/doctor");
 const Patient = require("../models/patient");
+const User = require("../models/user"); // Fallback for old data
 
 router.post("/", auth, role("patient"), async (req, res) => {
   const appointment = await Appointment.create({
@@ -23,7 +24,10 @@ router.get("/doctor", auth, role("doctor"), async (req, res) => {
   // Populate patient names
   const appointmentsWithNames = await Promise.all(
     appointments.map(async (apt) => {
-      const patient = await Patient.findById(apt.patientId).select("name");
+      let patient = await Patient.findById(apt.patientId).select("name");
+      if (!patient) {
+        patient = await User.findById(apt.patientId).select("name");
+      }
       return {
         ...apt.toObject(),
         patientName: patient?.name || "Unknown Patient",
@@ -40,7 +44,10 @@ router.get("/patient", auth, role("patient"), async (req, res) => {
   // Populate doctor names
   const appointmentsWithNames = await Promise.all(
     appointments.map(async (apt) => {
-      const doctor = await Doctor.findById(apt.doctorId).select("name");
+      let doctor = await Doctor.findById(apt.doctorId).select("name");
+      if (!doctor) {
+        doctor = await User.findById(apt.doctorId).select("name");
+      }
       return {
         ...apt.toObject(),
         doctorName: doctor?.name || "Unknown Doctor",

@@ -5,6 +5,7 @@ const auth = require("../middleware/auth");
 const role = require("../middleware/role");
 const DailyLog = require("../models/dailylog");
 const Patient = require("../models/patient");
+const User = require("../models/user"); // Fallback for old data
 
 router.post("/", auth, role("patient"), async (req, res) => {
   const log = await DailyLog.create({
@@ -22,7 +23,10 @@ router.get("/:patientId", auth, role("doctor"), async (req, res) => {
   const logs = await DailyLog.find({ patientId: req.params.patientId });
 
   // Populate patient name
-  const patient = await Patient.findById(req.params.patientId).select("name");
+  let patient = await Patient.findById(req.params.patientId).select("name");
+  if (!patient) {
+    patient = await User.findById(req.params.patientId).select("name");
+  }
   const logsWithName = logs.map((log) => ({
     ...log.toObject(),
     patientName: patient?.name || "Unknown Patient",

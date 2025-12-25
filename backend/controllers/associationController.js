@@ -2,6 +2,7 @@ const Association = require("../models/association");
 const Patient = require("../models/patient");
 const Doctor = require("../models/doctor");
 const Caretaker = require("../models/caretaker");
+const User = require("../models/user"); // Fallback for old data
 
 // ✅ SCAN QR CODE - Create association between doctor/caretaker and patient
 exports.scanQrCode = async (req, res) => {
@@ -70,8 +71,31 @@ exports.getMyAssociations = async (req, res) => {
           "name phone email specializations"
         );
 
+      // Handle doctors that might not be populated (old User model references)
+      const doctors = await Promise.all(
+        patient.associatedDoctors.filter((a) => a.isActive).map(async (assoc) => {
+          if (!assoc.doctorId || !assoc.doctorId.name) {
+            // Try to find in old User model
+            const oldUser = await User.findById(assoc.doctorId?._id || assoc.doctorId);
+            if (oldUser) {
+              return {
+                ...assoc.toObject(),
+                doctorId: {
+                  _id: oldUser._id,
+                  name: oldUser.name,
+                  specialization: oldUser.specialization || assoc.specialization,
+                  phone: oldUser.phone,
+                  email: oldUser.email,
+                },
+              };
+            }
+          }
+          return assoc;
+        })
+      );
+
       associations = {
-        doctors: patient.associatedDoctors.filter((a) => a.isActive),
+        doctors,
         caretakers: patient.associatedCaretakers.filter((a) => a.isActive),
       };
     } else if (userType === "Doctor" || role === "doctor") {
@@ -81,8 +105,33 @@ exports.getMyAssociations = async (req, res) => {
         "name age bloodGroup gender phone email"
       );
 
+      // Handle patients that might not be populated (old User model references)
+      const patients = await Promise.all(
+        doctor.associatedPatients.filter((a) => a.isActive).map(async (assoc) => {
+          if (!assoc.patientId || !assoc.patientId.name) {
+            // Try to find in old User model
+            const oldUser = await User.findById(assoc.patientId?._id || assoc.patientId);
+            if (oldUser) {
+              return {
+                ...assoc.toObject(),
+                patientId: {
+                  _id: oldUser._id,
+                  name: oldUser.name,
+                  age: oldUser.age,
+                  bloodGroup: oldUser.bloodGroup,
+                  gender: oldUser.gender,
+                  phone: oldUser.phone,
+                  email: oldUser.email,
+                },
+              };
+            }
+          }
+          return assoc;
+        })
+      );
+
       associations = {
-        patients: doctor.associatedPatients.filter((a) => a.isActive),
+        patients,
       };
     } else if (userType === "Caretaker" || role === "caretaker") {
       // Get caretaker's patients
@@ -91,8 +140,33 @@ exports.getMyAssociations = async (req, res) => {
         "name age bloodGroup gender phone email"
       );
 
+      // Handle patients that might not be populated (old User model references)
+      const patients = await Promise.all(
+        caretaker.associatedPatients.filter((a) => a.isActive).map(async (assoc) => {
+          if (!assoc.patientId || !assoc.patientId.name) {
+            // Try to find in old User model
+            const oldUser = await User.findById(assoc.patientId?._id || assoc.patientId);
+            if (oldUser) {
+              return {
+                ...assoc.toObject(),
+                patientId: {
+                  _id: oldUser._id,
+                  name: oldUser.name,
+                  age: oldUser.age,
+                  bloodGroup: oldUser.bloodGroup,
+                  gender: oldUser.gender,
+                  phone: oldUser.phone,
+                  email: oldUser.email,
+                },
+              };
+            }
+          }
+          return assoc;
+        })
+      );
+
       associations = {
-        patients: caretaker.associatedPatients.filter((a) => a.isActive),
+        patients,
       };
     }
 
