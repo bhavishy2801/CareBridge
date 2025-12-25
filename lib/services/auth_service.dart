@@ -8,6 +8,10 @@ class AuthService {
   static const String _userKey = 'current_user';
   static const String _tokenKey = 'auth_token';
 
+  // =====================
+  // LOCAL STORAGE
+  // =====================
+
   Future<User?> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(_userKey);
@@ -34,6 +38,10 @@ class AuthService {
     await prefs.remove(_tokenKey);
   }
 
+  // =====================
+  // LOGIN
+  // =====================
+
   Future<User> login(String email, String password, UserRole role) async {
     try {
       final response = await http.post(
@@ -45,7 +53,7 @@ class AuthService {
         }),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final token = data['token'];
         final userData = data['user'];
@@ -55,33 +63,60 @@ class AuthService {
           name: userData['name'],
           email: userData['email'],
           role: _parseRole(userData['role']),
-          phoneNumber: userData['phoneNumber'],
-          profileImage: userData['profileImage'],
+          gender: userData['gender'],
+          age: userData['age'],
+          bloodGroup: userData['bloodGroup'],
+          specialization: userData['specialization'],
         );
 
         await saveUser(user, token);
         return user;
       } else {
         final error = json.decode(response.body);
-        throw Exception(error['msg'] ?? error['message'] ?? 'Invalid credentials');
+        throw Exception(error['msg'] ?? 'Invalid credentials');
       }
     } catch (e) {
       throw Exception('Login error: $e');
     }
   }
 
-  Future<String> signup(String name, String email, String password, UserRole role) async {
+  // =====================
+  // SIGNUP (UPDATED)
+  // =====================
+
+  Future<String> signup({
+    required String name,
+    required String email,
+    required String password,
+    required UserRole role,
+    required String gender,
+    int? age,
+    String? bloodGroup,
+    String? specialization,
+  }) async {
     try {
+      final Map<String, dynamic> body = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role.name,
+        'gender': gender,
+      };
+
+      // Role-based fields
+      if (role == UserRole.patient) {
+        body['age'] = age;
+        body['bloodGroup'] = bloodGroup;
+      }
+
+      if (role == UserRole.doctor) {
+        body['specialization'] = specialization;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/signup'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'role': role.toString().split('.').last,
-          'language': 'en',
-        }),
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -89,12 +124,16 @@ class AuthService {
         return data['msg'] ?? 'User registered successfully';
       } else {
         final error = json.decode(response.body);
-        throw Exception(error['msg'] ?? error['message'] ?? 'Signup failed');
+        throw Exception(error['msg'] ?? 'Signup failed');
       }
     } catch (e) {
       throw Exception('Signup error: $e');
     }
   }
+
+  // =====================
+  // HELPERS
+  // =====================
 
   UserRole _parseRole(dynamic roleValue) {
     if (roleValue is String) {

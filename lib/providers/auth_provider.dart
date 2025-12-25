@@ -4,29 +4,30 @@ import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+
   User? _currentUser;
   String? _token;
   bool _isLoading = false;
 
   // DEBUG MODE: Set to true to skip login
   static const bool debugMode = false;
-  
+
   User? get currentUser => _currentUser;
   String? get token => _token;
   bool get isLoading => _isLoading;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _token != null;
 
+  /// Load user + token on app start
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
     if (debugMode) {
-      // Mock user for debugging - change role as needed
       _currentUser = User(
         id: 'debug-user-123',
         name: 'Debug User',
         email: 'debug@test.com',
-        role: UserRole.patient, // Change to: doctor, patient, caregiver, admin
+        role: UserRole.patient,
       );
       _token = 'debug-token';
     } else {
@@ -38,12 +39,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// LOGIN
   Future<void> login(String email, String password, UserRole role) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       _currentUser = await _authService.login(email, password, role);
+      _token = await _authService.getToken();
     } catch (e) {
       rethrow;
     } finally {
@@ -52,13 +55,33 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> signup(String name, String email, String password, UserRole role) async {
+  /// SIGNUP (UPDATED – ROLE AWARE)
+  Future<String> signup({
+    required String name,
+    required String email,
+    required String password,
+    required UserRole role,
+    required String gender,
+    int? age,
+    String? bloodGroup,
+    String? specialization,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final message = await _authService.signup(name, email, password, role);
-      // Signup successful but user must login separately
+      final message = await _authService.signup(
+        name: name,
+        email: email,
+        password: password,
+        role: role,
+        gender: gender,
+        age: age,
+        bloodGroup: bloodGroup,
+        specialization: specialization,
+      );
+
+      // Signup does NOT auto-login
       return message;
     } catch (e) {
       rethrow;
@@ -68,6 +91,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// LOGOUT
   Future<void> logout() async {
     await _authService.logout();
     _currentUser = null;

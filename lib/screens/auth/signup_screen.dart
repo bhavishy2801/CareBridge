@@ -12,13 +12,25 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  final _ageController = TextEditingController();
+  final _specializationController = TextEditingController();
+
   UserRole _selectedRole = UserRole.patient;
+  String _selectedGender = 'male';
+  String _selectedBloodGroup = 'O+';
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+
+  final List<String> _bloodGroups = [
+    'A+','A-','B+','B-','AB+','AB-','O+','O-'
+  ];
 
   @override
   void dispose() {
@@ -26,88 +38,72 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _ageController.dispose();
+    _specializationController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignup() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final message = await context.read<AuthProvider>().signup(
-              _nameController.text,
-              _emailController.text,
-              _passwordController.text,
-              _selectedRole,
-            );
-        
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          // Navigate to login screen after successful signup
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Signup failed: $e')),
-          );
-        }
-      }
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final auth = context.read<AuthProvider>();
+
+      final message = await auth.signup(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        role: _selectedRole,
+        gender: _selectedGender,
+        age: _selectedRole == UserRole.patient
+            ? int.parse(_ageController.text)
+            : null,
+        bloodGroup:
+            _selectedRole == UserRole.patient ? _selectedBloodGroup : null,
+        specialization:
+            _selectedRole == UserRole.doctor ? _specializationController.text : null,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Signup failed: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo/Title
-                  Icon(
-                    Icons.health_and_safety,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
-                  ),
+                  Icon(Icons.health_and_safety,
+                      size: 80, color: Theme.of(context).primaryColor),
                   const SizedBox(height: 16),
-                  Text(
-                    'Create Account',
-                    style: Theme.of(context).textTheme.headlineLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 48),
+                  Text('Create Account',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineLarge),
+                  const SizedBox(height: 32),
 
-                  // Name Field
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Full Name',
-                      prefixIcon: Icon(Icons.person),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                  ),
+                  _textField(_nameController, 'Full Name', Icons.person),
                   const SizedBox(height: 16),
 
-                  // Role Selection
                   DropdownButtonFormField<UserRole>(
                     value: _selectedRole,
                     decoration: const InputDecoration(
@@ -118,120 +114,105 @@ class _SignupScreenState extends State<SignupScreen> {
                     items: UserRole.values.map((role) {
                       return DropdownMenuItem(
                         value: role,
-                        child: Text(role.toString().split('.').last.toUpperCase()),
+                        child: Text(role.name.toUpperCase()),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedRole = value);
-                      }
-                    },
+                    onChanged: (value) =>
+                        setState(() => _selectedRole = value!),
                   ),
                   const SizedBox(height: 16),
 
-                  // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
-                      border: OutlineInputBorder(),
+                  // Gender (patient, doctor, caregiver)
+                  if (_selectedRole != UserRole.admin)
+                    DropdownButtonFormField<String>(
+                      value: _selectedGender,
+                      decoration: const InputDecoration(
+                        labelText: 'Gender',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'male', child: Text('Male')),
+                        DropdownMenuItem(value: 'female', child: Text('Female')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      ],
+                      onChanged: (v) => setState(() => _selectedGender = v!),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
+
+                  if (_selectedRole != UserRole.admin)
+                    const SizedBox(height: 16),
+
+                  // Patient-only
+                  if (_selectedRole == UserRole.patient) ...[
+                    _textField(
+                      _ageController,
+                      'Age',
+                      Icons.calendar_today,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedBloodGroup,
+                      decoration: const InputDecoration(
+                        labelText: 'Blood Group',
+                        prefixIcon: Icon(Icons.bloodtype),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _bloodGroups
+                          .map((bg) =>
+                              DropdownMenuItem(value: bg, child: Text(bg)))
+                          .toList(),
+                      onChanged: (v) =>
+                          setState(() => _selectedBloodGroup = v!),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Doctor-only
+                  if (_selectedRole == UserRole.doctor) ...[
+                    _textField(
+                      _specializationController,
+                      'Specialization',
+                      Icons.medical_information,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  _textField(_emailController, 'Email', Icons.email,
+                      keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 16),
 
-                  // Password Field
-                  TextFormField(
+                  _passwordField(
                     controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() => _isPasswordVisible = !_isPasswordVisible);
-                        },
-                      ),
-                      border: const OutlineInputBorder(),
-                    ),
-                    obscureText: !_isPasswordVisible,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
+                    label: 'Password',
+                    visible: _isPasswordVisible,
+                    onToggle: () =>
+                        setState(() => _isPasswordVisible = !_isPasswordVisible),
                   ),
                   const SizedBox(height: 16),
 
-                  // Confirm Password Field
-                  TextFormField(
+                  _passwordField(
                     controller: _confirmPasswordController,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isConfirmPasswordVisible
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() =>
-                              _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
-                        },
-                      ),
-                      border: const OutlineInputBorder(),
-                    ),
-                    obscureText: !_isConfirmPasswordVisible,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
+                    label: 'Confirm Password',
+                    visible: _isConfirmPasswordVisible,
+                    onToggle: () => setState(
+                        () => _isConfirmPasswordVisible =
+                            !_isConfirmPasswordVisible),
+                    confirmAgainst: _passwordController.text,
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Signup Button
                   ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Sign Up', style: TextStyle(fontSize: 16)),
+                    onPressed: auth.isLoading ? null : _handleSignup,
+                    child: auth.isLoading
+                        ? const CircularProgressIndicator(strokeWidth: 2)
+                        : const Text('Sign Up'),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Login Link
                   TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/login'),
                     child: const Text('Already have an account? Login'),
                   ),
                 ],
@@ -240,6 +221,54 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _textField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
+      ),
+      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+    );
+  }
+
+  Widget _passwordField({
+    required TextEditingController controller,
+    required String label,
+    required bool visible,
+    required VoidCallback onToggle,
+    String? confirmAgainst,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: !visible,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.lock),
+        suffixIcon: IconButton(
+          icon: Icon(visible ? Icons.visibility_off : Icons.visibility),
+          onPressed: onToggle,
+        ),
+        border: const OutlineInputBorder(),
+      ),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Required';
+        if (confirmAgainst != null && v != confirmAgainst) {
+          return 'Passwords do not match';
+        }
+        if (v.length < 6) return 'Min 6 characters';
+        return null;
+      },
     );
   }
 }
