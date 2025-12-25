@@ -81,9 +81,8 @@ AssociationSchema.index({ patientQrCodeId: 1 });
 AssociationSchema.index({ associatedUserId: 1, associatedUserType: 1 });
 
 // Update timestamp on save
-AssociationSchema.pre("save", function (next) {
+AssociationSchema.pre("save", function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 // Static method to check if two users can communicate
