@@ -30,12 +30,12 @@ class CarePlan {
       doctorId: json['doctorId'],
       appointmentId: json['appointmentId'],
       createdAt: DateTime.parse(json['createdAt']),
-      medications: (json['medications'] as List)
-          .map((m) => Medication.fromJson(m))
-          .toList(),
-      exercises: (json['exercises'] as List)
-          .map((e) => Exercise.fromJson(e))
-          .toList(),
+      medications:
+          (json['medications'] as List)
+              .map((m) => Medication.fromJson(m))
+              .toList(),
+      exercises:
+          (json['exercises'] as List).map((e) => Exercise.fromJson(e)).toList(),
       instructions: json['instructions'] ?? '',
       warningSigns: json['warningSigns'] ?? '',
       pdfUrl: json['pdfUrl'],
@@ -110,10 +110,6 @@ class Exercise {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'duration': duration,
-      'frequency': frequency,
-    };
+    return {'name': name, 'duration': duration, 'frequency': frequency};
   }
 }

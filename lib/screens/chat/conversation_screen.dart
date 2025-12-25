@@ -15,14 +15,14 @@ class ConversationScreen extends StatefulWidget {
 class _ConversationScreenState extends State<ConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   ChatService? _chatService;
   List<ChatMessage> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
   bool _isTyping = false;
   String? _partnerTyping;
-  
+
   late String _partnerId;
   late String _partnerType;
   late String _partnerName;
@@ -40,7 +40,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (_initialized) return;
     _initialized = true;
 
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     _partnerId = args['partnerId'];
     _partnerType = args['partnerType'];
     _partnerName = args['partnerName'];
@@ -73,9 +74,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
           }
         });
         _scrollToBottom();
-        
+
         // Mark as read if from partner
-        if (message.senderId == _partnerId && message.conversationId.isNotEmpty) {
+        if (message.senderId == _partnerId &&
+            message.conversationId.isNotEmpty) {
           _chatService!.markMessagesAsRead(message.conversationId, _partnerId);
         }
       }
@@ -104,9 +106,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
 
     try {
-      print('🔄 Loading messages for partnerId: $_partnerId, partnerType: $_partnerType');
+      print(
+        '🔄 Loading messages for partnerId: $_partnerId, partnerType: $_partnerType',
+      );
       setState(() => _isLoading = true);
-      final messages = await _chatService!.getConversation(_partnerId, _partnerType);
+      final messages = await _chatService!.getConversation(
+        _partnerId,
+        _partnerType,
+      );
       print('✅ Messages loaded: ${messages.length} messages');
       setState(() {
         _messages = messages;
@@ -118,9 +125,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
       print('Stack trace: $stackTrace');
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load messages: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load messages: $e')));
       }
     }
   }
@@ -139,7 +146,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   void _handleTyping() {
     if (_chatService == null) return;
-    
+
     if (!_isTyping) {
       _isTyping = true;
       _chatService!.startTyping(_partnerId);
@@ -194,9 +201,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       setState(() => _isSending = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send message: $e')));
       }
     }
   }
@@ -214,9 +221,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final user = context.watch<AuthProvider>().currentUser;
 
     if (!_initialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -225,15 +230,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: _partnerType.toLowerCase() == 'doctor'
-                  ? Colors.green[100] 
-                  : Colors.blue[100],
+              backgroundColor:
+                  _partnerType.toLowerCase() == 'doctor'
+                      ? Colors.green[100]
+                      : Colors.blue[100],
               child: Text(
                 _partnerName.isNotEmpty ? _partnerName[0].toUpperCase() : '?',
                 style: TextStyle(
-                  color: _partnerType.toLowerCase() == 'doctor'
-                      ? Colors.green[700] 
-                      : Colors.blue[700],
+                  color:
+                      _partnerType.toLowerCase() == 'doctor'
+                          ? Colors.green[700]
+                          : Colors.blue[700],
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -244,8 +251,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _partnerType.toLowerCase() == 'doctor' 
-                        ? 'Dr. $_partnerName' 
+                    _partnerType.toLowerCase() == 'doctor'
+                        ? 'Dr. $_partnerName'
                         : _partnerName,
                     style: const TextStyle(fontSize: 16),
                   ),
@@ -277,12 +284,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
             },
           ),
           PopupMenuButton(
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'clear',
-                child: Text('Clear chat'),
-              ),
-            ],
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'clear',
+                    child: Text('Clear chat'),
+                  ),
+                ],
           ),
         ],
       ),
@@ -290,60 +298,62 @@ class _ConversationScreenState extends State<ConversationScreen> {
         children: [
           // Messages list
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _messages.isEmpty
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _messages.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 80,
+                            color: Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No messages yet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Send a message to start the conversation',
+                            style: TextStyle(color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isMe = message.senderId == user?.id;
+                        final showDate =
+                            index == 0 ||
+                            !_isSameDay(
+                              _messages[index - 1].createdAt,
+                              message.createdAt,
+                            );
+
+                        return Column(
                           children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No messages yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Send a message to start the conversation',
-                              style: TextStyle(color: Colors.grey[500]),
+                            if (showDate)
+                              _DateSeparator(date: message.createdAt),
+                            _MessageBubble(
+                              message: message,
+                              isMe: isMe,
+                              partnerName: _partnerName,
                             ),
                           ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final message = _messages[index];
-                          final isMe = message.senderId == user?.id;
-                          final showDate = index == 0 ||
-                              !_isSameDay(
-                                _messages[index - 1].createdAt,
-                                message.createdAt,
-                              );
-
-                          return Column(
-                            children: [
-                              if (showDate)
-                                _DateSeparator(date: message.createdAt),
-                              _MessageBubble(
-                                message: message,
-                                isMe: isMe,
-                                partnerName: _partnerName,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                        );
+                      },
+                    ),
           ),
 
           // Typing indicator
@@ -471,21 +481,24 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: message.senderType.toLowerCase() == 'doctor'
-                  ? Colors.green[100]
-                  : Colors.blue[100],
+              backgroundColor:
+                  message.senderType.toLowerCase() == 'doctor'
+                      ? Colors.green[100]
+                      : Colors.blue[100],
               child: Text(
                 partnerName.isNotEmpty ? partnerName[0].toUpperCase() : '?',
                 style: TextStyle(
                   fontSize: 12,
-                  color: message.senderType.toLowerCase() == 'doctor'
-                      ? Colors.green[700]
-                      : Colors.blue[700],
+                  color:
+                      message.senderType.toLowerCase() == 'doctor'
+                          ? Colors.green[700]
+                          : Colors.blue[700],
                 ),
               ),
             ),
@@ -498,9 +511,7 @@ class _MessageBubble extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey[200],
+                color: isMe ? Theme.of(context).primaryColor : Colors.grey[200],
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -525,9 +536,10 @@ class _MessageBubble extends StatelessWidget {
                         timeFormat.format(message.createdAt),
                         style: TextStyle(
                           fontSize: 10,
-                          color: isMe
-                              ? Colors.white.withOpacity(0.7)
-                              : Colors.grey[600],
+                          color:
+                              isMe
+                                  ? Colors.white.withOpacity(0.7)
+                                  : Colors.grey[600],
                         ),
                       ),
                       if (isMe) ...[
@@ -535,9 +547,10 @@ class _MessageBubble extends StatelessWidget {
                         Icon(
                           message.isRead ? Icons.done_all : Icons.done,
                           size: 14,
-                          color: message.isRead
-                              ? Colors.blue[200]
-                              : Colors.white.withOpacity(0.7),
+                          color:
+                              message.isRead
+                                  ? Colors.blue[200]
+                                  : Colors.white.withOpacity(0.7),
                         ),
                       ],
                     ],

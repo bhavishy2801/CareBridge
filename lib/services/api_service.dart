@@ -138,7 +138,7 @@ class ApiService {
   /// Get all care plans for a specific patient
   Future<List<CarePlan>> getCarePlans(String patientId, String token) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/careplan/$patientId'),
+      Uri.parse('$baseUrl/careplan/$patientId'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -146,6 +146,7 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
+      print('Care plans response body: ${response.body}');  
       final List data = jsonDecode(response.body);
       return data.map((e) => CarePlan.fromJson(e)).toList();
     } else {
