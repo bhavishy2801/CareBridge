@@ -118,7 +118,7 @@
   - [Color Palette](#color-palette)
   - [Typography](#typography)
   - [Components](#components)
-- [🔄 Data Synchronization](#-data-synchronization)
+- [Data Synchronization](#data-synchronization)
   - [Offline-First Architecture](#offline-first-architecture)
   - [Sync Flow](#sync-flow)
 - [Analytics \& Monitoring](#analytics--monitoring)
@@ -1181,7 +1181,7 @@ Info: #0175C2 (Information)
 
 ---
 
-## 🔄 Data Synchronization
+## Data Synchronization
 
 ### Offline-First Architecture
 
