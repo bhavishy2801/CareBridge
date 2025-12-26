@@ -7,6 +7,7 @@ import '../../models/user.dart';
 import '../../models/appointment.dart';
 import '../../services/api_service.dart';
 import '../../services/chat_service.dart';
+import '../../models/report.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -87,42 +88,60 @@ class _DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<_DashboardTab> {
-  List<PatientSummary> _patientSummaries = [];
   bool _isLoading = true;
-  String _filterSeverity = 'All';
+  List<Report> _reports = [];
+  String _selectedTab = 'Mild';
+  final List<String> _tabs = ['Mild', 'Moderate', 'Severe'];
 
   @override
   void initState() {
     super.initState();
-    _refreshProfile();
-    _loadPatientSummaries();
+    _fetchReports();
   }
 
-  Future<void> _refreshProfile() async {
-    await context.read<AuthProvider>().refreshUser();
-  }
-
-  Future<void> _loadPatientSummaries() async {
+  Future<void> _fetchReports() async {
     setState(() => _isLoading = true);
-    final user = context.read<AuthProvider>().currentUser;
-    if (user != null) {
-      try {
-        final apiService = ApiService();
-        final summaries = await apiService.getPatientSummaries(user.id);
-        setState(() {
-          _patientSummaries = summaries;
-          _isLoading = false;
-        });
-      } catch (e) {
-        setState(() => _isLoading = false);
-      }
+    try {
+      final auth = context.read<AuthProvider>();
+      final apiService = ApiService(authToken: auth.token);
+      final reports = await apiService.getDoctorReports();
+      setState(() {
+        _reports = reports;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
     }
   }
 
-  List<PatientSummary> get _filteredSummaries {
-    if (_filterSeverity == 'All') return _patientSummaries;
-    return _patientSummaries
-        .where((s) => s.severity == _filterSeverity)
+  // Helper to get highest severity from a report
+  String _getSeverity(Report report) {
+    if (report.symptoms.isEmpty) return 'Mild';
+    final maxSeverity = report.symptoms
+        .map((s) => s.severity)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    if (maxSeverity >= 8) return 'Severe';
+    if (maxSeverity >= 5) return 'Moderate';
+    return 'Mild';
+  }
+
+  // Group latest report per patient by severity
+  Map<String, Report> get _latestReportPerPatient {
+    final Map<String, Report> map = {};
+    for (final report in _reports) {
+      if (!map.containsKey(report.patient) ||
+          (report.createdAt != null &&
+              map[report.patient]?.createdAt != null &&
+              report.createdAt!.isAfter(map[report.patient]!.createdAt!))) {
+        map[report.patient] = report;
+      }
+    }
+    return map;
+  }
+
+  List<Report> get _filteredReports {
+    return _latestReportPerPatient.values
+        .where((r) => _getSeverity(r) == _selectedTab)
         .toList();
   }
 
@@ -142,8 +161,6 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final associatedPatientsCount = user?.associatedPatients.length ?? 0;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Doctor Dashboard'),
@@ -177,95 +194,51 @@ class _DashboardTabState extends State<_DashboardTab> {
           Container(
             padding: const EdgeInsets.all(16.0),
             color: Theme.of(context).primaryColor.withOpacity(0.1),
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      child: Text(
-                        user?.name[0].toUpperCase() ?? 'D',
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Dr. ${user?.name ?? 'Doctor'}',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            '$associatedPatientsCount Connected Patients',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                CircleAvatar(
+                  radius: 30,
+                  child: Text(
+                    user?.name[0].toUpperCase() ?? 'D',
+                    style: const TextStyle(fontSize: 24),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Severe',
-                        count:
-                            _patientSummaries
-                                .where((s) => s.severity == 'Severe')
-                                .length,
-                        color: Colors.red,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dr. ${user?.name ?? 'Doctor'}',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Moderate',
-                        count:
-                            _patientSummaries
-                                .where((s) => s.severity == 'Moderate')
-                                .length,
-                        color: Colors.orange,
+                      Text(
+                        '${_latestReportPerPatient.length} Patients with Reports',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Mild',
-                        count:
-                            _patientSummaries
-                                .where((s) => s.severity == 'Mild')
-                                .length,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-
-          // Filter
+          // Tabs for severity
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                const Text('Filter: '),
+                const Text('Severity: '),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'All', label: Text('All')),
-                      ButtonSegment(value: 'Severe', label: Text('Severe')),
-                      ButtonSegment(value: 'Moderate', label: Text('Moderate')),
-                      ButtonSegment(value: 'Mild', label: Text('Mild')),
-                    ],
-                    selected: {_filterSeverity},
+                    segments:
+                        _tabs
+                            .map((t) => ButtonSegment(value: t, label: Text(t)))
+                            .toList(),
+                    selected: {_selectedTab},
                     onSelectionChanged: (Set<String> newSelection) {
                       setState(() {
-                        _filterSeverity = newSelection.first;
+                        _selectedTab = newSelection.first;
                       });
                     },
                   ),
@@ -273,13 +246,12 @@ class _DashboardTabState extends State<_DashboardTab> {
               ],
             ),
           ),
-
-          // Patient List
+          // Patient Report Cards
           Expanded(
             child:
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _filteredSummaries.isEmpty
+                    : _filteredReports.isEmpty
                     ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -291,62 +263,112 @@ class _DashboardTabState extends State<_DashboardTab> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No patient reports yet',
+                            'No patient reports in this category',
                             style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Scan a patient\'s QR code to connect',
-                            style: TextStyle(color: Colors.grey[600]),
                           ),
                         ],
                       ),
                     )
                     : RefreshIndicator(
-                      onRefresh: _loadPatientSummaries,
+                      onRefresh: _fetchReports,
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        itemCount: _filteredSummaries.length,
+                        itemCount: _filteredReports.length,
                         itemBuilder: (context, index) {
-                          final patient = _filteredSummaries[index];
+                          final report = _filteredReports[index];
+                          final patientName = report.patient;
+                          final severity = _getSeverity(report);
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12.0),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: _getSeverityColor(
-                                  patient.severity,
-                                ),
-                                child: Text(
-                                  patient.patientName[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              title: Text(patient.patientName),
-                              subtitle: Column(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Severity: ${patient.severity}'),
-                                  Text('Timeline: ${patient.timeline}'),
-                                  Text(
-                                    'Symptoms: ${patient.keySymptoms.join(", ")}',
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: _getSeverityColor(
+                                          severity,
+                                        ),
+                                        child: Text(
+                                          patientName.isNotEmpty
+                                              ? patientName[0].toUpperCase()
+                                              : '?',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Text(
+                                          'Patient: $patientName',
+                                          style:
+                                              Theme.of(
+                                                context,
+                                              ).textTheme.titleMedium,
+                                        ),
+                                      ),
+                                      Text(
+                                        severity,
+                                        style: TextStyle(
+                                          color: _getSeverityColor(severity),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  if (report.createdAt != null)
+                                    Text(
+                                      'Reported: ${report.createdAt}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Symptoms:',
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                  ...report.symptoms.map(
+                                    (s) => Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2.0,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.circle,
+                                            size: 10,
+                                            color: _getSeverityColor(
+                                              _getSeverity(report),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${s.name} (Severity: ${s.severity})',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  if (report.customMessage != null &&
+                                      report.customMessage!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(
+                                        'Message: ${report.customMessage}',
+                                        style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
-                              trailing:
-                                  patient.needsConsultation
-                                      ? const Icon(
-                                        Icons.priority_high,
-                                        color: Colors.red,
-                                      )
-                                      : const Icon(Icons.chevron_right),
-                              isThreeLine: true,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/doctor/patient-detail',
-                                  arguments: patient,
-                                );
-                              },
                             ),
                           );
                         },

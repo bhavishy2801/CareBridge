@@ -1,3 +1,4 @@
+import '../models/report.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -25,6 +26,32 @@ class ApiService {
   // ========== APPOINTMENTS ==========
 
   /// Create a new appointment (Patient role)
+  ///   /// Fetch all reports for the authenticated doctor
+  Future<List<Report>> getDoctorReports() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/reports/doctor'),
+        headers: headers,
+      );
+      debugPrint(
+        'ApiService.getDoctorReports response status: \\${response.statusCode}',
+      );
+      debugPrint(
+        'ApiService.getDoctorReports response body: \\${response.body}',
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> reportsJson = data['reports'] ?? [];
+        return reportsJson.map((json) => Report.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to fetch reports: \\${response.body}');
+      }
+    } catch (e) {
+      debugPrint('ApiService.getDoctorReports error: $e');
+      throw Exception('Error fetching reports: $e');
+    }
+  }
+
   Future<Appointment> createAppointment({
     required String doctorId,
     required DateTime date,
@@ -51,6 +78,31 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error creating appointment: $e');
+    }
+  }
+
+  Future<Report> submitReport(Report report) async {
+    try {
+      final requestBody = json.encode(report.toJson());
+      debugPrint('ApiService.submitReport request: $requestBody');
+      final response = await http.post(
+        Uri.parse('$baseUrl/reports'),
+        headers: headers,
+        body: requestBody,
+      );
+      debugPrint(
+        'ApiService.submitReport response status: \\${response.statusCode}',
+      );
+      debugPrint('ApiService.submitReport response body: \\${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        return Report.fromJson(data['report'] ?? data);
+      } else {
+        throw Exception('Failed to submit report: \\${response.body}');
+      }
+    } catch (e) {
+      debugPrint('ApiService.submitReport error: $e');
+      throw Exception('Error submitting report: $e');
     }
   }
 

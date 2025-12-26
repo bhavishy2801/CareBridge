@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/symptom_report.dart';
+import '../../models/report.dart';
 import '../../services/api_service.dart';
 import '../../services/offline_service.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,7 +40,7 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (image != null) {
       setState(() {
         _attachments.add(image.path);
@@ -51,65 +51,67 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
   Future<void> _submitReport() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSubmitting = true);
-
       try {
         final user = context.read<AuthProvider>().currentUser;
-        if (user == null) return;
+        final token = context.read<AuthProvider>().token;
+        if (user == null || token == null) return;
 
-        final selectedSymptoms = _symptoms.entries
-            .where((e) => e.value)
-            .map((e) => e.key)
-            .toList();
+        final selectedSymptoms =
+            _symptoms.entries
+                .where((e) => e.value)
+                .map(
+                  (e) => Symptom(
+                    name: e.key,
+                    severity:
+                        _severity == 'Mild'
+                            ? 3
+                            : _severity == 'Moderate'
+                            ? 6
+                            : 9,
+                  ),
+                )
+                .toList();
 
-        final report = SymptomReport(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          patientId: user.id,
-          timestamp: DateTime.now(),
-          symptoms: {
-            'selected': selectedSymptoms,
-            'additional': _symptomsController.text,
-          },
-          severity: _severity,
-          attachments: _attachments.isEmpty ? null : _attachments,
-          isSynced: false,
+        if (_symptomsController.text.trim().isNotEmpty) {
+          selectedSymptoms.add(
+            Symptom(
+              name: 'Other',
+              severity:
+                  _severity == 'Mild'
+                      ? 3
+                      : _severity == 'Moderate'
+                      ? 6
+                      : 9,
+            ),
+          );
+        }
+
+        final report = Report(
+          patient: user.id,
+          symptoms: selectedSymptoms,
+          customMessage:
+              _symptomsController.text.trim().isNotEmpty
+                  ? _symptomsController.text.trim()
+                  : null,
         );
 
-        // Save offline first
-        final offlineService = OfflineService();
-        await offlineService.saveSymptomReportOffline(report);
+        final apiService = ApiService(authToken: token);
+        await apiService.submitReport(report);
 
-        // Try to sync
-        try {
-          final apiService = ApiService();
-          await apiService.submitSymptomReport(report);
-          await offlineService.markAsSynced(report.id);
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Symptoms reported successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.pop(context);
-          }
-        } catch (e) {
-          // Saved offline, will sync later
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Saved locally. Will sync when online.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-            Navigator.pop(context);
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Symptoms reported successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       } finally {
         if (mounted) {
@@ -122,9 +124,7 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report Symptoms'),
-      ),
+      appBar: AppBar(title: const Text('Report Symptoms')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -187,17 +187,18 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
             const SizedBox(height: 8),
             Card(
               child: Column(
-                children: _symptoms.keys.map((symptom) {
-                  return CheckboxListTile(
-                    title: Text(symptom),
-                    value: _symptoms[symptom],
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _symptoms[symptom] = value ?? false;
-                      });
-                    },
-                  );
-                }).toList(),
+                children:
+                    _symptoms.keys.map((symptom) {
+                      return CheckboxListTile(
+                        title: Text(symptom),
+                        value: _symptoms[symptom],
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _symptoms[symptom] = value ?? false;
+                          });
+                        },
+                      );
+                    }).toList(),
               ),
             ),
             const SizedBox(height: 16),
@@ -224,22 +225,23 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
             if (_attachments.isNotEmpty)
               Card(
                 child: Column(
-                  children: _attachments
-                      .map(
-                        (path) => ListTile(
-                          leading: const Icon(Icons.image),
-                          title: Text(path.split('/').last),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              setState(() {
-                                _attachments.remove(path);
-                              });
-                            },
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      _attachments
+                          .map(
+                            (path) => ListTile(
+                              leading: const Icon(Icons.image),
+                              title: Text(path.split('/').last),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  setState(() {
+                                    _attachments.remove(path);
+                                  });
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(),
                 ),
               ),
             OutlinedButton.icon(
@@ -255,13 +257,17 @@ class _SymptomFormScreenState extends State<SymptomFormScreen> {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit Report', style: TextStyle(fontSize: 16)),
+              child:
+                  _isSubmitting
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Text(
+                        'Submit Report',
+                        style: TextStyle(fontSize: 16),
+                      ),
             ),
           ],
         ),

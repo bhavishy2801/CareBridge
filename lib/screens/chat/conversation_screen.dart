@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -67,12 +69,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _chatService!.messageStream.listen((message) {
       if ((message.senderId == _partnerId) || (message.senderId == user.id)) {
         setState(() {
-          // Check if message already exists
-          final exists = _messages.any((m) => m.id == message.id);
-          if (!exists) {
-            _messages.add(message);
-          }
-        });
+        final index = _messages.indexWhere(
+          (m) => m.id == message.id || m.content == message.content,
+        );
+
+        if (index != -1) {
+          _messages[index] = message; // replace optimistic
+        } else {
+          _messages.add(message);
+        }
+      });
         _scrollToBottom();
 
         // Mark as read if from partner
@@ -178,18 +184,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _messageController.clear();
     _isTyping = false;
     _chatService!.stopTyping(_partnerId);
-
+    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
     try {
       // Send via WebSocket
       _chatService!.sendMessage(
         receiverId: _partnerId,
         receiverType: _partnerType,
         content: text,
+        tempId: tempId,
       );
 
       // Add optimistic message
       final optimisticMessage = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: tempId,
         conversationId: '',
         senderId: user.id,
         senderType: user.role.name,
@@ -199,8 +206,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
         createdAt: DateTime.now(),
       );
 
+
       setState(() {
-        _messages.add(optimisticMessage);
+       if (!_chatService!.isConnected) {
+          _messages.add(optimisticMessage);
+        }
         _isSending = false;
       });
       _scrollToBottom();

@@ -51,7 +51,7 @@ class ChatMessage {
       status: json['status'] ?? 'sent',
       createdAt:
           json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'])
+              ? DateTime.parse(json['createdAt']).toLocal()
               : DateTime.now(),
     );
   }
