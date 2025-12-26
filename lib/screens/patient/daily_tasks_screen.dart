@@ -49,15 +49,16 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   /// FREQUENCY MATCHER
   /// ----------------------------
   bool _isForToday(String frequency) {
-    final weekday = [
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-      'sunday'
-    ][DateTime.now().weekday - 1];
+    final weekday =
+        [
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+          'sunday',
+        ][DateTime.now().weekday - 1];
 
     final freq = frequency.toLowerCase().trim();
     if (freq == 'daily') return true;
@@ -120,13 +121,11 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   /// ----------------------------
   /// PROGRESS METRICS
   /// ----------------------------
-  int get _completed =>
-      _completion.values.where((v) => v).length;
+  int get _completed => _completion.values.where((v) => v).length;
 
   int get _total => _completion.length;
 
-  double get _progress =>
-      _total == 0 ? 0 : _completed / _total;
+  double get _progress => _total == 0 ? 0 : _completed / _total;
 
   /// ----------------------------
   /// UI
@@ -135,23 +134,22 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Daily Plan')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tasksByDoctor.isEmpty
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _tasksByDoctor.isEmpty
               ? _emptyState()
               : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _progressCard(),
-                    const SizedBox(height: 24),
-                    ..._tasksByDoctor.entries.map(
-                      (entry) => _doctorSection(
-                        doctor: entry.key,
-                        tasks: entry.value,
-                      ),
-                    ),
-                  ],
-                ),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _progressCard(),
+                  const SizedBox(height: 24),
+                  ..._tasksByDoctor.entries.map(
+                    (entry) =>
+                        _doctorSection(doctor: entry.key, tasks: entry.value),
+                  ),
+                ],
+              ),
     );
   }
 
@@ -208,10 +206,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Dr. $doctor',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('Dr. $doctor', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         SizedBox(
           height: 160,
@@ -262,20 +257,14 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           const SizedBox(height: 8),
           Text(
             task.name,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(task.details),
           const Spacer(),
           Text(
             task.doctorName,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
       ),
@@ -284,10 +273,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
 
   Widget _emptyState() {
     return const Center(
-      child: Text(
-        'No tasks for today',
-        style: TextStyle(fontSize: 18),
-      ),
+      child: Text('No tasks for today', style: TextStyle(fontSize: 18)),
     );
   }
 }
