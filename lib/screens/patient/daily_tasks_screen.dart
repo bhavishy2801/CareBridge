@@ -4,6 +4,25 @@ import '../../providers/auth_provider.dart';
 import '../../models/care_plan.dart';
 import '../../services/api_service.dart';
 
+/// ----------------------------
+/// MODEL USED ONLY FOR UI
+/// ----------------------------
+class DailyTask {
+  final String id;
+  final String name;
+  final String type; // medication | exercise
+  final String doctorName;
+  final String details;
+
+  DailyTask({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.doctorName,
+    required this.details,
+  });
+}
+
 class DailyTasksScreen extends StatefulWidget {
   const DailyTasksScreen({super.key});
 
@@ -12,265 +31,263 @@ class DailyTasksScreen extends StatefulWidget {
 }
 
 class _DailyTasksScreenState extends State<DailyTasksScreen> {
-  CarePlan? _carePlan;
   bool _isLoading = true;
-  final Map<String, bool> _medicationCompletion = {};
-  final Map<String, bool> _exerciseCompletion = {};
+
+  /// All tasks for today grouped by doctor
+  final Map<String, List<DailyTask>> _tasksByDoctor = {};
+
+  /// FRONTEND-ONLY completion state
+  final Map<String, bool> _completion = {};
 
   @override
   void initState() {
     super.initState();
-    _loadCarePlan();
+    _loadTodayTasks();
   }
 
-  Future<void> _loadCarePlan() async {
+  /// ----------------------------
+  /// FREQUENCY MATCHER
+  /// ----------------------------
+  bool _isForToday(String frequency) {
+    final weekday = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ][DateTime.now().weekday - 1];
+
+    final freq = frequency.toLowerCase().trim();
+    if (freq == 'daily') return true;
+    return freq.contains(weekday);
+  }
+
+  /// ----------------------------
+  /// LOAD + TRANSFORM DATA
+  /// ----------------------------
+  Future<void> _loadTodayTasks() async {
     final user = context.read<AuthProvider>().currentUser;
-    if (user != null) {
-      final apiService = ApiService();
-      final auth = context.read<AuthProvider>();
-      final carePlans = await apiService.getCarePlans(user.id, auth.token!);
-      final carePlan = carePlans.isNotEmpty ? carePlans.first : null;
-      setState(() {
-        _carePlan = carePlan;
-        if (_carePlan != null) {
-          for (var med in _carePlan!.medications) {
-            _medicationCompletion[med.name] = false;
-          }
-          for (var ex in _carePlan!.exercises) {
-            _exerciseCompletion[ex.name] = false;
-          }
+    final token = context.read<AuthProvider>().token;
+
+    if (user == null || token == null) return;
+
+    final apiService = ApiService();
+    final carePlans = await apiService.getCarePlans(user.id, token);
+
+    final Map<String, List<DailyTask>> grouped = {};
+
+    for (final plan in carePlans) {
+      final doctor = plan.doctorName ?? 'Unknown Doctor';
+
+      for (final med in plan.medications) {
+        if (_isForToday(med.frequency)) {
+          final task = DailyTask(
+            id: 'med-${plan.id}-${med.name}',
+            name: med.name,
+            type: 'medication',
+            doctorName: doctor,
+            details: '${med.dosage} • ${med.frequency}',
+          );
+          grouped.putIfAbsent(doctor, () => []).add(task);
+          _completion[task.id] = false;
         }
-        _isLoading = false;
-      });
+      }
+
+      for (final ex in plan.exercises) {
+        if (_isForToday(ex.frequency)) {
+          final task = DailyTask(
+            id: 'ex-${plan.id}-${ex.name}',
+            name: ex.name,
+            type: 'exercise',
+            doctorName: doctor,
+            details: '${ex.duration} • ${ex.frequency}',
+          );
+          grouped.putIfAbsent(doctor, () => []).add(task);
+          _completion[task.id] = false;
+        }
+      }
     }
+
+    setState(() {
+      _tasksByDoctor.clear();
+      _tasksByDoctor.addAll(grouped);
+      _isLoading = false;
+    });
   }
 
-  int get _completedTasks {
-    return _medicationCompletion.values.where((v) => v).length +
-        _exerciseCompletion.values.where((v) => v).length;
-  }
+  /// ----------------------------
+  /// PROGRESS METRICS
+  /// ----------------------------
+  int get _completed =>
+      _completion.values.where((v) => v).length;
 
-  int get _totalTasks {
-    return _medicationCompletion.length + _exerciseCompletion.length;
-  }
+  int get _total => _completion.length;
 
-  double get _completionPercentage {
-    if (_totalTasks == 0) return 0;
-    return (_completedTasks / _totalTasks) * 100;
-  }
+  double get _progress =>
+      _total == 0 ? 0 : _completed / _total;
 
+  /// ----------------------------
+  /// UI
+  /// ----------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Tasks'),
-      ),
+      appBar: AppBar(title: const Text('Daily Plan')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _carePlan == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.task_outlined,
-                          size: 80, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No tasks available',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Your care plan will appear here'),
-                    ],
-                  ),
-                )
+          : _tasksByDoctor.isEmpty
+              ? _emptyState()
               : ListView(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   children: [
-                    // Progress Card
-                    Card(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Today\'s Progress',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              height: 120,
-                              width: 120,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CircularProgressIndicator(
-                                    value: _completionPercentage / 100,
-                                    strokeWidth: 12,
-                                    backgroundColor: Colors.grey[300],
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      _completionPercentage >= 80
-                                          ? Colors.green
-                                          : _completionPercentage >= 50
-                                              ? Colors.orange
-                                              : Colors.red,
-                                    ),
-                                  ),
-                                  Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          '${_completionPercentage.toInt()}%',
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          '$_completedTasks/$_totalTasks',
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _completionPercentage == 100
-                                  ? 'Great job! All tasks completed!'
-                                  : 'Keep going!',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _progressCard(),
                     const SizedBox(height: 24),
-
-                    // Medications
-                    if (_carePlan!.medications.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.medication, color: Colors.red),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Medications',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ..._carePlan!.medications.map((med) {
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8.0),
-                          child: CheckboxListTile(
-                            title: Text(med.name),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Dosage: ${med.dosage}'),
-                                Text('Frequency: ${med.frequency}'),
-                              ],
-                            ),
-                            value: _medicationCompletion[med.name] ?? false,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _medicationCompletion[med.name] = value ?? false;
-                              });
-                            },
-                            secondary: CircleAvatar(
-                              backgroundColor:
-                                  (_medicationCompletion[med.name] ?? false)
-                                      ? Colors.green
-                                      : Colors.grey,
-                              child: Icon(
-                                (_medicationCompletion[med.name] ?? false)
-                                    ? Icons.check
-                                    : Icons.medication,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // Exercises
-                    if (_carePlan!.exercises.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.fitness_center, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Exercises',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ..._carePlan!.exercises.map((ex) {
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8.0),
-                          child: CheckboxListTile(
-                            title: Text(ex.name),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Duration: ${ex.duration}'),
-                                Text('Frequency: ${ex.frequency}'),
-                              ],
-                            ),
-                            value: _exerciseCompletion[ex.name] ?? false,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _exerciseCompletion[ex.name] = value ?? false;
-                              });
-                            },
-                            secondary: CircleAvatar(
-                              backgroundColor:
-                                  (_exerciseCompletion[ex.name] ?? false)
-                                      ? Colors.green
-                                      : Colors.grey,
-                              child: Icon(
-                                (_exerciseCompletion[ex.name] ?? false)
-                                    ? Icons.check
-                                    : Icons.fitness_center,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // Submit Button
-                    ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Progress saved successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'Save Progress',
-                        style: TextStyle(fontSize: 16),
+                    ..._tasksByDoctor.entries.map(
+                      (entry) => _doctorSection(
+                        doctor: entry.key,
+                        tasks: entry.value,
                       ),
                     ),
                   ],
                 ),
+    );
+  }
+
+  /// ----------------------------
+  /// COMPONENTS
+  /// ----------------------------
+  Widget _progressCard() {
+    return Card(
+      color: Theme.of(context).primaryColor.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              "Today's Progress",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 110,
+              width: 110,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: _progress,
+                    strokeWidth: 10,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                  Center(
+                    child: Text(
+                      '${(_progress * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('$_completed / $_total completed'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _doctorSection({
+    required String doctor,
+    required List<DailyTask> tasks,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dr. $doctor',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: tasks.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              return _taskCard(tasks[index]);
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _taskCard(DailyTask task) {
+    final isMed = task.type == 'medication';
+
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isMed ? Colors.red[50] : Colors.blue[50],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isMed ? Icons.medication : Icons.fitness_center,
+                color: isMed ? Colors.red : Colors.blue,
+              ),
+              const Spacer(),
+              Checkbox(
+                value: _completion[task.id],
+                onChanged: (v) {
+                  setState(() {
+                    _completion[task.id] = v ?? false;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            task.name,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(task.details),
+          const Spacer(),
+          Text(
+            task.doctorName,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return const Center(
+      child: Text(
+        'No tasks for today',
+        style: TextStyle(fontSize: 18),
+      ),
     );
   }
 }
