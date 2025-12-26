@@ -1,2 +1,0 @@
-C:/Users/kushagra/CareBridge/android/app/.cxx/Debug/1x175o4x/x86/CMakeFiles/edit_cache.dir
-C:/Users/kushagra/CareBridge/android/app/.cxx/Debug/1x175o4x/x86/CMakeFiles/rebuild_cache.dir
