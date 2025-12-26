@@ -23,6 +23,9 @@ app.use("/api/dailylog", require("./routes/dailylog"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/sync", require("./routes/sync"));
 
+// Route for patient reports
+app.use("/api/reports", require("./routes/reports"));
+
 // New routes for associations and chat
 app.use("/api/associations", require("./routes/associations"));
 app.use("/api/chat", require("./routes/chat"));
